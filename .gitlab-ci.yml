@@ -99,7 +99,7 @@ plan:
     - web
 
 ## APPLY TEST ENVS
-apply:
+apply_test:
   stage: apply
   script:
     - terraform apply -input=false $PLAN
@@ -123,7 +123,7 @@ apply:
     on_stop: destroy_test
 
 ## APPLY STAGING
-apply:
+apply_stag:
   stage: apply
   script:
     - terraform apply -input=false $PLAN
@@ -147,7 +147,7 @@ apply:
     on_stop: destroy_staging
 
 ## APPLY PRODUCTION
-apply:
+apply_prod:
   stage: apply
   script:
     - terraform apply -input=false $PLAN
@@ -186,7 +186,7 @@ destroy_test:
     action: stop
 
 ## DESTROY STAGING
-destroy_staging:
+destroy_stag:
   stage: destroy
   script:
     - terraform destroy -auto-approve
