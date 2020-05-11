@@ -144,7 +144,7 @@ apply_stag:
   environment:
     name: staging
     url: $DYNAMIC_ENVIRONMENT_URL
-    on_stop: destroy_staging
+    on_stop: destroy_stag
 
 ## APPLY PRODUCTION
 apply_prod:
