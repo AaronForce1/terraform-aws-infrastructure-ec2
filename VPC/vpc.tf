@@ -14,6 +14,7 @@ resource "aws_subnet" "main" {
   vpc_id = aws_vpc.main.id
   cidr_block = "${element(var.subnets_cidr,count.index)}"
   availability_zone = "${element(data.aws_availability_zones.azs.names,count.index)}"
+  depends_on = aws_vpc.main
 
   tags = {
     Environment = var.tfenv
