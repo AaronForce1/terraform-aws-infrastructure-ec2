@@ -56,8 +56,9 @@ tfsec:
     reports:
       sast: gl-sast-report.json
   only:
-    - web
-    - merge_requests
+    refs:
+      - web
+      - merge_requests
     variables:
       - $TF_VAR_tfenv == "stag" || $TF_VAR_tfenv == "test"
 
@@ -112,7 +113,8 @@ apply:
     reports:
       dotenv: deploy.env
   only:
-    - web
+    refs:
+      - web
     variables:
       - $TF_VAR_tfenv == "test"
   environment:
