@@ -37,9 +37,11 @@ validate:
   stage: validate
   script:
     - terraform validate
-  only:
+  except:
+    - branches
+    - tags
     variables:
-      - $TF_VAR_tfenv != ""
+      - $TF_VAR_tfenv == ""
     
 
 ## PLAN STAGE
