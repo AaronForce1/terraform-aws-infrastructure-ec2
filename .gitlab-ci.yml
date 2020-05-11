@@ -61,6 +61,10 @@ tfsec:
   artifacts:
     reports:
       sast: gl-sast-report.json
+  except:
+    refs:
+      - branches
+      - tags
   only:
     variables:
       - $TF_VAR_tfenv != ""
@@ -94,12 +98,14 @@ plan:
   stage: plan
   script:
     - terraform plan -out=$PLAN
-  dependencies:
-    - validate
   artifacts:
     name: plan
     paths:
       - $PLAN
+  except:
+    refs:
+      - branches
+      - tags
   only:
     variables:
       - $TF_VAR_tfenv != ""
