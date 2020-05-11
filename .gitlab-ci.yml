@@ -58,6 +58,8 @@ tfsec:
   only:
     - web
     - merge_requests
+    variables:
+      - $TF_VAR_tfenv == "stag" || $TF_VAR_tfenv == "test"
 
 merge review:
   stage: plan
@@ -110,10 +112,9 @@ apply:
     reports:
       dotenv: deploy.env
   only:
-    refs:
-      - web
+    - web
     variables:
-      - $TF_VAR_tfenv == /test/
+      - $TF_VAR_tfenv == "test"
   environment:
     name: test
     url: $DYNAMIC_ENVIRONMENT_URL
@@ -138,7 +139,6 @@ apply:
       - web
     variables:
       - $TF_VAR_tfenv == "stag"
-  needs: ["validate", "plan", "tfsec"]
   environment:
     name: staging
     url: $DYNAMIC_ENVIRONMENT_URL
