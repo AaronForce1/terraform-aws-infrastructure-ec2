@@ -60,7 +60,7 @@ tfsec:
       - web
       - merge_requests
     variables:
-      - $TF_VAR_tfenv == "stag" || $TF_VAR_tfenv == "test"
+      - $TF_VAR_tfenv == "stag" || $TF_VAR_tfenv == "prod"
 
 merge review:
   stage: plan
