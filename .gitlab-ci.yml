@@ -21,10 +21,7 @@ before_script:
   - curl -o aws-iam-authenticator https://amazon-eks.s3-us-west-2.amazonaws.com/1.14.6/2019-08-22/bin/linux/amd64/aws-iam-authenticator
   - install aws-iam-authenticator /usr/local/bin/ && rm aws-iam-authenticator
   - terraform --version
-  - terraform init -backend-config "region=ap-southeast-1" \
-      -backend-config "key=$TF_VAR_app_name/$TF_VAR_tfenv/terraform.tfstate" \
-      -backend-config "bucket=ets-terraform-remote-state-storage-s3" \
-      -backend-config "encrypt=true"
+  - terraform init -backend-config "region=ap-southeast-1" -backend-config "key=$TF_VAR_app_name/$TF_VAR_tfenv/terraform.tfstate" -backend-config "bucket=ets-terraform-remote-state-storage-s3" -backend-config "encrypt=true"
 
 stages:
   - validate
@@ -37,9 +34,9 @@ validate:
   stage: validate
   script:
     - terraform validate
-  except:
-    variables:
-      - $TF_VAR_tfenv == ""
+  only:
+    - web
+    - merge_requests
     
 
 ## PLAN STAGE
@@ -58,9 +55,9 @@ tfsec:
   artifacts:
     reports:
       sast: gl-sast-report.json
-  except:
-    variables:
-      - $TF_VAR_tfenv == ""
+  only:
+    - web
+    - merge_requests
 
 merge review:
   stage: plan
@@ -95,9 +92,8 @@ plan:
     name: plan
     paths:
       - $PLAN
-  except:
-    variables:
-      - $TF_VAR_tfenv == ""
+  only:
+    - web
 
 ## APPLY TEST ENVS
 apply:
@@ -114,9 +110,10 @@ apply:
     reports:
       dotenv: deploy.env
   only:
+    refs:
+      - web
     variables:
-      - $TF_VAR_tfenv == "test"
-  needs: ["validate", "plan", "tfsec"]
+      - $TF_VAR_tfenv == /test/
   environment:
     name: test
     url: $DYNAMIC_ENVIRONMENT_URL
@@ -138,7 +135,7 @@ apply:
       dotenv: deploy.env
   only:
     refs:
-      - master
+      - web
     variables:
       - $TF_VAR_tfenv == "stag"
   needs: ["validate", "plan", "tfsec"]
@@ -163,10 +160,9 @@ apply:
       dotenv: deploy.env
   only:
     refs:
-      - master
+      - web
     variables:
       - $TF_VAR_tfenv == "prod"
-  needs: ["validate", "plan", "tfsec"]
   when: manual
   environment:
     name: production
@@ -178,6 +174,11 @@ destroy_test:
   script:
     - terraform destroy -auto-approve
   when: manual
+  only:
+    refs:
+      - web
+    variables:
+      - $TF_VAR_tfenv == "test"
   environment:
     name: test
     action: stop
@@ -188,6 +189,11 @@ destroy_staging:
   script:
     - terraform destroy -auto-approve
   when: manual
+  only:
+    refs:
+      - web
+    variables:
+      - $TF_VAR_tfenv == "stag"
   environment:
     name: staging
     action: stop
