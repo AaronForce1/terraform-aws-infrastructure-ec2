@@ -53,6 +53,7 @@ tfsec:
   artifacts:
     reports:
       sast: gl-sast-report.json
+  needs: ["validate"]
 
 merge review:
   stage: plan
@@ -89,6 +90,7 @@ plan:
       - $PLAN
   only:
     - branches
+  needs: ["validate"]
 
 ## APPLY TEST ENVS
 apply:
@@ -104,8 +106,10 @@ apply:
     untracked: true
     reports:
       dotenv: deploy.env
-  except:
-    - master
+  only:
+    variables:
+      - $TF_VAR_tfenv == "test"
+  needs: ["validate", "plan", "tfsec"]
   environment:
     name: test
     url: $DYNAMIC_ENVIRONMENT_URL
@@ -126,7 +130,11 @@ apply:
     reports:
       dotenv: deploy.env
   only:
-    - master
+    refs:
+      - master
+    variables:
+      - $TF_VAR_tfenv == "stag"
+  needs: ["validate", "plan", "tfsec"]
   environment:
     name: staging
     url: $DYNAMIC_ENVIRONMENT_URL
@@ -147,7 +155,11 @@ apply:
     reports:
       dotenv: deploy.env
   only:
-    - master
+    refs:
+      - master
+    variables:
+      - $TF_VAR_tfenv == "prod"
+  needs: ["validate", "plan", "tfsec"]
   when: manual
   environment:
     name: production
@@ -159,10 +171,6 @@ destroy_test:
   script:
     - terraform destroy -auto-approve
   when: manual
-  only:
-    - branches
-  except:
-    - master 
   environment:
     name: test
     action: stop
@@ -173,8 +181,6 @@ destroy_staging:
   script:
     - terraform destroy -auto-approve
   when: manual
-  only:
-    - master
   environment:
     name: staging
     action: stop
