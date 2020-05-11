@@ -38,6 +38,8 @@ validate:
   script:
     - terraform validate
   only:
+    variables:
+      - $TF_VAR_tfenv != ""
     
 
 ## PLAN STAGE
