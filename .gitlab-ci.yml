@@ -16,6 +16,8 @@ cache:
     - .terraform
 
 before_script:
+  - apk add --update curl jq
+  - alias convert_report="jq -r '([.resource_changes[].change.actions?]|flatten)|{\"create\":(map(select(.==\"create\"))|length),\"update\":(map(select(.==\"update\"))|length),\"delete\":(map(select(.==\"delete\"))|length)}'"
   - curl -o aws-iam-authenticator https://amazon-eks.s3-us-west-2.amazonaws.com/1.14.6/2019-08-22/bin/linux/amd64/aws-iam-authenticator
   - install aws-iam-authenticator /usr/local/bin/ && rm aws-iam-authenticator
   - terraform --version
@@ -36,8 +38,7 @@ validate:
   script:
     - terraform validate
   only:
-    - branches
-  when: manual
+    
 
 ## PLAN STAGE
 tfsec:
@@ -53,6 +54,9 @@ tfsec:
   artifacts:
     reports:
       sast: gl-sast-report.json
+  only:
+    variables:
+      - $TF_VAR_tfenv != ""
   needs: ["validate"]
 
 merge review:
@@ -89,7 +93,8 @@ plan:
     paths:
       - $PLAN
   only:
-    - branches
+    variables:
+      - $TF_VAR_tfenv != ""
   needs: ["validate"]
 
 ## APPLY TEST ENVS
