@@ -38,8 +38,9 @@ validate:
   script:
     - terraform validate
   except:
-    - branches
-    - tags
+    refs:
+      - branches
+      - tags
     variables:
       - $TF_VAR_tfenv == ""
     
