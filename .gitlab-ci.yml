@@ -56,13 +56,14 @@ tfsec:
   before_script:
     - tfsec -v
   script: tfsec . -f json | tee gl-sast-report.json
+  dependencies:
+    - validate
   artifacts:
     reports:
       sast: gl-sast-report.json
   only:
     variables:
       - $TF_VAR_tfenv != ""
-  needs: ["validate"]
 
 merge review:
   stage: plan
@@ -93,6 +94,8 @@ plan:
   stage: plan
   script:
     - terraform plan -out=$PLAN
+  dependencies:
+    - validate
   artifacts:
     name: plan
     paths:
@@ -100,7 +103,6 @@ plan:
   only:
     variables:
       - $TF_VAR_tfenv != ""
-  needs: ["validate"]
 
 ## APPLY TEST ENVS
 apply:
