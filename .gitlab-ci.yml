@@ -38,9 +38,6 @@ validate:
   script:
     - terraform validate
   except:
-    refs:
-      - branches
-      - tags
     variables:
       - $TF_VAR_tfenv == ""
     
@@ -62,12 +59,8 @@ tfsec:
     reports:
       sast: gl-sast-report.json
   except:
-    refs:
-      - branches
-      - tags
-  only:
     variables:
-      - $TF_VAR_tfenv != ""
+      - $TF_VAR_tfenv == ""
 
 merge review:
   stage: plan
@@ -103,12 +96,8 @@ plan:
     paths:
       - $PLAN
   except:
-    refs:
-      - branches
-      - tags
-  only:
     variables:
-      - $TF_VAR_tfenv != ""
+      - $TF_VAR_tfenv == ""
 
 ## APPLY TEST ENVS
 apply:
