@@ -14,7 +14,7 @@ variable "app_slug" {
 ## GLOBAL VAR CONFIGURATION
 variable "aws_region" {
   description = "Region for the VPC"
-  default = "ap-southeast-1"
+  default = "ap-northeast-2"
 }
 
 variable "naming_format" {
@@ -29,7 +29,7 @@ variable "billingcustomer" {
 
 variable "key_name" {
   description = "TF Key"
-  default = "TF-ticketflap-singapore-key"
+  default = "ETS-ticketflap-seoul-key"
 }
 
 ## AWS REGIONAL VARS
@@ -41,10 +41,6 @@ variable "ubuntu_owner" {
 ## ENVIRONMENT VARS
 variable "tfenv" {
   description = "Environment"
-}
-
-variable "vpc_name" {
-  description = "Name given to the different VPCs"
 }
 
 variable "cidr_block" {

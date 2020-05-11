@@ -11,12 +11,11 @@ locals {
 }
 
 terraform {
- backend "s3" {
- encrypt = true
- bucket = "asiaticketing-terraform-remote-state-storage-s3"
- region = "ap-southeast-1"
- key = "${var.app_name}/${var.tfenv}/terraform.tfstate"
- }
+ backend "s3" {}
+}
+
+provider "aws" {
+  region = var.aws_region
 }
 
 ############################################
@@ -28,6 +27,7 @@ module "ec2_vpc" {
   cidr_block    = "172.16.42.0/23"
   subnets_cidr  = ["172.16.42.0/24", "172.16.43.0/24"]
   naming_format = var.naming_format
+  app_slug      = var.app_slug
 }
 
 module "ec2_securitygroups" {
@@ -47,7 +47,6 @@ module "ec2_deploy" {
   instance_set              = var.instance_set
   codebase                  = var.codebase
   tfenv                     = var.tfenv
-  vpc_name                  = var.vpc_name
   vpc_id                    = module.ec2_vpc.output_vpc_id
   securitygroup             = module.ec2_securitygroups.output_sgs
   naming_format             = var.naming_format
@@ -56,4 +55,5 @@ module "ec2_deploy" {
   liveSET                   = var.liveSET
   ubuntu_id                 = data.aws_ami.ubuntu.id
   billingcustomer           = var.billingcustomer
+  aws_region                = var.aws_region
 }

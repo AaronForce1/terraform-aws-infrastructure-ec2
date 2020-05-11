@@ -8,3 +8,5 @@ variable "subnets_cidr" {
 }
 variable "subcount" {
 }
+variable "app_slug" {
+}

@@ -12,6 +12,9 @@ variable "key_name" {
 variable "ubuntu_id" {
   description = "AMI Ubuntu ID"
 }
+variable "aws_region" {
+  
+}
 
 ## APPLICATION VALUES
 variable "app_name" {
@@ -26,9 +29,6 @@ variable "app_slug" {
 ## ENVIRONMENT VARS
 variable "tfenv" {
   description = "Environment"
-}
-variable "vpc_name" {
-  description = "Name given to the different VPCs"
 }
 variable "vpc_id" {
   description = "VPC ID passed in via module"

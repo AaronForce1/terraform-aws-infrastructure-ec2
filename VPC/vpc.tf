@@ -1,11 +1,10 @@
-# VPC
 resource "aws_vpc" "main" {
   cidr_block       = var.cidr_block
   enable_dns_hostnames = true
 
   tags = {
     Environment = var.tfenv
-    Name = "${var.naming_format}-${var.tfenv}-vpc"
+    Name = "${var.naming_format}-${var.tfenv}-${var.app_slug}-vpc"
   }
 }
 

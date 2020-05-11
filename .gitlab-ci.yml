@@ -9,6 +9,11 @@ variables:
   PLAN: plan.tfplan
   JSON_PLAN_FILE: tfplan.json
   TF_IN_AUTOMATION: "true"
+  TF_VAR_tfenv: "test"
+  TF_VAR_app_name:
+  TF_VAR_app_slug:
+  
+
 
 cache:
   key: "$CI_COMMIT_REF_SLUG"
@@ -19,7 +24,10 @@ before_script:
   - curl -o aws-iam-authenticator https://amazon-eks.s3-us-west-2.amazonaws.com/1.14.6/2019-08-22/bin/linux/amd64/aws-iam-authenticator
   - install aws-iam-authenticator /usr/local/bin/ && rm aws-iam-authenticator
   - terraform --version
-  - terraform init
+  - terraform init -backend-config "region=ap-southeast-1" \
+      -backend-config "key=$TF_VAR_app_name/$TF_VAR_tfenv/terraform.tfstate" \
+      -backend-config "bucket=ets-terraform-remote-state-storage-s3" \
+      -backend-config "encrypt=true"
 
 stages:
   - validate
