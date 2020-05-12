@@ -29,7 +29,7 @@ stages:
   - apply
   - destroy
 
-## VALIDATE STAGE
+## VALIDATE
 validate:
   stage: validate
   script:
@@ -39,7 +39,7 @@ validate:
     - merge_requests
     
 
-## PLAN STAGE
+## PLAN 
 tfsec:
   image: 
     name: wesleydeanflexion/tfsec
@@ -98,8 +98,8 @@ plan:
   only:
     - web
 
-## APPLY TEST ENVS
-apply_test:
+## APPLY NON PROD ENVS
+apply_nonProd:
   stage: apply
   script:
     - terraform apply -input=false $PLAN
@@ -115,36 +115,13 @@ apply_test:
   only:
     refs:
       - web
+  except:
     variables:
-      - $TF_VAR_tfenv == "test"
+      - $TF_VAR_tfenv == "prod"
   environment:
     name: ${TF_VAR_app_slug}-${TF_VAR_tfenv}
     url: $DYNAMIC_ENVIRONMENT_URL
-    on_stop: destroy_test
-
-## APPLY STAGING
-apply_stag:
-  stage: apply
-  script:
-    - terraform apply -input=false $PLAN
-    - DYNAMIC_ENVIRONMENT_URL=$(terraform output -no-color env-dynamic-url)
-    - echo "DYNAMIC_ENVIRONMENT_URL=$DYNAMIC_ENVIRONMENT_URL" >> deploy.env
-  dependencies:
-    - plan
-  artifacts:
-    name: $CI_COMMIT_REF_SLUG
-    untracked: true
-    reports:
-      dotenv: deploy.env
-  only:
-    refs:
-      - web
-    variables:
-      - $TF_VAR_tfenv == "stag"
-  environment:
-    name: staging
-    url: $DYNAMIC_ENVIRONMENT_URL
-    on_stop: destroy_stag
+    on_stop: destroy
 
 ## APPLY PRODUCTION
 apply_prod:
@@ -167,11 +144,11 @@ apply_prod:
       - $TF_VAR_tfenv == "prod"
   when: manual
   environment:
-    name: production
+    name: ${TF_VAR_app_slug}-production
     url: $DYNAMIC_ENVIRONMENT_URL
 
 ## DESTROY TEST
-destroy_test:
+destroy:
   stage: destroy
   script:
     - terraform destroy -auto-approve
@@ -179,23 +156,9 @@ destroy_test:
   only:
     refs:
       - web
+  except:
     variables:
-      - $TF_VAR_tfenv == "test"
+      - $TF_VAR_tfenv == "prod"
   environment:
     name: ${TF_VAR_app_slug}-${TF_VAR_tfenv}
-    action: stop
-
-## DESTROY STAGING
-destroy_stag:
-  stage: destroy
-  script:
-    - terraform destroy -auto-approve
-  when: manual
-  only:
-    refs:
-      - web
-    variables:
-      - $TF_VAR_tfenv == "stag"
-  environment:
-    name: staging
     action: stop

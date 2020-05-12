@@ -6,9 +6,5 @@ data "aws_security_groups" "vpc_security_groups" {
   }
 }
 
-data "aws_subnet_ids" "vpc_subnets" {
-    vpc_id = var.vpc_id
-}
-
 data "aws_availability_zones" "azs" {
 }

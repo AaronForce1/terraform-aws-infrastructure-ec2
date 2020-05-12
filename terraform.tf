@@ -48,6 +48,7 @@ module "ec2_deploy" {
   codebase                  = var.codebase
   tfenv                     = var.tfenv
   vpc_id                    = module.ec2_vpc.output_vpc_id
+  vpc_subnet_ids            = module.ec2_vpc.output_subnet_ids
   securitygroup             = module.ec2_securitygroups.output_sgs
   naming_format             = var.naming_format
   key_name                  = var.key_name

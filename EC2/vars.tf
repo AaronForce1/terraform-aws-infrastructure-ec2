@@ -39,6 +39,9 @@ variable "profile" {
 variable "securitygroup" {
   description = "Security Group"
 }
+variable "vpc_subnet_ids" {
+  
+}
 
 ## LEGACY VARS
 variable "instance_set" {
