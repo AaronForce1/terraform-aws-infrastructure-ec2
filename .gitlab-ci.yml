@@ -182,7 +182,7 @@ destroy_test:
     variables:
       - $TF_VAR_tfenv == "test"
   environment:
-    name: test
+    name: $TF_VAR_app_slug-test
     action: stop
 
 ## DESTROY STAGING
@@ -197,5 +197,5 @@ destroy_stag:
     variables:
       - $TF_VAR_tfenv == "stag"
   environment:
-    name: staging
+    name: $TF_VAR_app_slug-staging
     action: stop
