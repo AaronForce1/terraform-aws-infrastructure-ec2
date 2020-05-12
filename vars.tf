@@ -11,6 +11,12 @@ variable "app_slug" {
   description = "Application Slug"
 }
 
+variable "instance_type" {
+  # Standard Types (M | L | XL | XXL): m5.large | c5.xlarge | t3a.2xlarge | m5a.2xlarge
+  description = "AWS Instance Type for provisioning"
+  default = "m5.large"
+}
+
 ## GLOBAL VAR CONFIGURATION
 variable "aws_region" {
   description = "Region for the VPC"
