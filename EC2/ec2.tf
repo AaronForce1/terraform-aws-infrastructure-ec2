@@ -3,7 +3,7 @@ resource "aws_instance" "ec2_deploy" {
     instance_type                   = var.profile[2]
     key_name                        = var.key_name
     subnet_id                       = element(var.vpc_subnet_ids, count.index).id
-    associate_public_ip_address     = true
+    associate_public_ip_address     = true #tfsec:ignore:AWS012
     # security groups which already exists return ids and an array - SG's which are being built by terraform simply have an id
     vpc_security_group_ids          = data.aws_security_groups.vpc_security_groups.ids
     count                           = var.profile[0]
