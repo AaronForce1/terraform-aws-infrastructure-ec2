@@ -2,12 +2,9 @@ locals {
   #array  = [ QTY, NAME, INSTANCE_TYPE, ROLE, SGNAME ]
   environments = {
     test  = [ "1", var.app_name, "m5.large", var.app_slug,  join("", [var.app_slug, "-", "sg"])]
+    stag  = [ "1", var.app_name, "c5.xlarge", var.app_slug, join("", [var.app_slug, "-", "sg"])]
     prod  = [ "1", var.app_name, "c5.xlarge", var.app_slug, join("", [var.app_slug, "-", "sg"])]
   }
-}
-
-locals {
-  profile = "test" #${lookup(var.profile, var.tfenv)}
 }
 
 terraform {
