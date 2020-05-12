@@ -118,7 +118,7 @@ apply_test:
     variables:
       - $TF_VAR_tfenv == "test"
   environment:
-    name: test
+    name: ${TF_VAR_app_slug}-${TF_VAR_tfenv}
     url: $DYNAMIC_ENVIRONMENT_URL
     on_stop: destroy_test
 
@@ -182,7 +182,7 @@ destroy_test:
     variables:
       - $TF_VAR_tfenv == "test"
   environment:
-    name: $TF_VAR_app_slug-test
+    name: test
     action: stop
 
 ## DESTROY STAGING
@@ -197,5 +197,5 @@ destroy_stag:
     variables:
       - $TF_VAR_tfenv == "stag"
   environment:
-    name: $TF_VAR_app_slug-staging
+    name: staging
     action: stop
