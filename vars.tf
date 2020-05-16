@@ -17,6 +17,12 @@ variable "instance_type" {
   default = "m5.large"
 }
 
+## TO-DO: Needs to be mounted manually right now.
+variable "app_vol_size" {
+  description = "Application Volume Size"
+  default = "20"
+}
+
 ## GLOBAL VAR CONFIGURATION
 variable "aws_region" {
   description = "Region for the VPC"

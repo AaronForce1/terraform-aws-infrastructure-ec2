@@ -27,7 +27,7 @@ resource "aws_instance" "ec2_deploy" {
     ebs_block_device {
       device_name = "/dev/xvdb"
       volume_type = "gp2"
-      volume_size = 20
+      volume_size = var.app_vol_size
       encrypted = true
     }
 

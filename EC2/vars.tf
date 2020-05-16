@@ -25,6 +25,10 @@ variable "app_slug" {
   description = "Application Slug"
 }
 
+variable "app_vol_size" {
+  description = "Default App Volume Size"
+}
+
 
 ## ENVIRONMENT VARS
 variable "tfenv" {

@@ -54,4 +54,5 @@ module "ec2_deploy" {
   ubuntu_id                 = data.aws_ami.ubuntu.id
   billingcustomer           = var.billingcustomer
   aws_region                = var.aws_region
+  app_vol_size             = var.app_vol_size
 }
