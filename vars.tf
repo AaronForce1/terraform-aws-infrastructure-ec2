@@ -78,5 +78,5 @@ variable "codebase" {
 }
 variable "liveSET" {
   description = "either live or not - set to yes or no"
-  default = "yes"
+  default = "fixed"
 }
