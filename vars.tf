@@ -17,6 +17,28 @@ variable "instance_type" {
   default = "m5.large"
 }
 
+variable "internal_ingress_ports" {
+  description = "Ports to be opened to allow ingress from Office VPN"
+  type = list(string)
+  default = []
+}
+
+variable "external_ingress_ports" {
+  description = "Ports to be opened to allow ingress from the internet"
+  type = list(string)
+  default = []
+}
+
+variable "alb_ingress" {
+  description = "ALB Ingress mapping to internal services; Typically the same mapping 1-to-1 of ingress ports above"
+  type = list(object({
+    internal_port = number
+    internal_protocol = string
+    external_port = number
+  }))
+  default = []
+}
+
 ## TO-DO: Needs to be mounted manually right now.
 variable "app_vol_size" {
   description = "Application Volume Size"
@@ -26,7 +48,7 @@ variable "app_vol_size" {
 ## GLOBAL VAR CONFIGURATION
 variable "aws_region" {
   description = "Region for the VPC"
-  default = "ap-northeast-2"
+  default = "ap-southeast-1"
 }
 
 variable "naming_format" {
@@ -55,16 +77,26 @@ variable "tfenv" {
   description = "Environment"
 }
 
+variable "ubuntu_version" {
+  description = "Ubuntu Version for pulling from AMI and creating EC2"
+  default = "20.04"
+}
+
 variable "cidr_block" {
   description = "Default CIDR Blocks to be used to manage VPC internal IP mapping"
   default = "172.42.10.0/23"
+}
+
+variable "pre_existing_vpc" {
+  description = "Define a custom VPC name that this EC2 deployment should attach to, otherwise a custom VPC will be generated for this resource"
+  default = false
 }
 
 ## ADMINISTRATION VARS
 variable "admin_ips" {
   type        = list(string)
   description = "list of ingress ports"
-  default     = ["92.40.160.0/19", "202.82.226.146/32"]
+  default     = ["202.82.226.146/32"]
 }
 
 ## LEGACY VARS

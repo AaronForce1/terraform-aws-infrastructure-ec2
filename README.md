@@ -48,3 +48,5 @@ The pipeline can be queued manually from Gitlab via the Pipelines > Run Pipeline
 - `TF_VAR_app_name` _eg. Gitlab, Tableau Server, etc._
 - `TF_VAR_app_slug` _eg. gitlab, tableau, melco-sftp, etc._
 - `TF_VAR_aws_region` _eg. ap-northeast-2, ap-southeast-1, etc._
+
+# Environment Variables Available
