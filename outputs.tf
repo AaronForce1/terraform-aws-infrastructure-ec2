@@ -3,5 +3,5 @@ output "ec2_instances" {
 }
 
 output "output_sgs" {
-  value = module.security-group
+  value = module.main_sg
 }

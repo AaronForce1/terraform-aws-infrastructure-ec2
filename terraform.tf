@@ -5,8 +5,6 @@ locals {
     stag  = [ "1", var.app_name, var.instance_type, var.app_slug, join("", [var.app_slug, "-", "sg"])]
     prod  = [ "1", var.app_name, var.instance_type, var.app_slug, join("", [var.app_slug, "-", "sg"])]
   }
-
-  ec2_availability_zone = "a" //substr(data.aws_availability_zones.azs.names[count.index % 2], -1, -1)
 }
 
 terraform {
@@ -48,6 +46,30 @@ module "ec2_vpc" {
   }
 }
 
+module "alb_sg" {
+  source  = "terraform-aws-modules/security-group/aws"
+  version = "~> 3.0"
+
+  name                      = "${var.naming_format}-${var.tfenv}-${var.app_slug}-LB-sg"
+  description               = "ETS ${var.tfenv} security group for Load Balancer Supporting: ${var.app_name}"
+  vpc_id                    = var.pre_existing_vpc == false ? module.ec2_vpc.vpc_id : data.aws_vpc.env_vpc.id
+
+  ingress_cidr_blocks = ["202.82.226.146/32"]
+  ingress_rules       = ["ssh-tcp", "http-80-tcp"]
+  egress_rules        = ["all-all"]
+
+  ingress_with_cidr_blocks = [
+    for item in var.alb_ingress:
+      {
+        from_port     = item.external_port
+        to_port       = item.external_port
+        protocol      = "tcp"
+        description   = "Office VPN Access, Load Balancer: ${var.app_name}: ${item.external_port}"
+        cidr_blocks   = "202.82.226.146/32"
+      }
+  ]
+}
+
 module "main_sg" {
   source  = "terraform-aws-modules/security-group/aws"
   version = "~> 3.0"
@@ -77,10 +99,11 @@ module "main_sg" {
         from_port                 = item.internal_port
         to_port                   = item.internal_port
         protocol                  = "tcp"
-        description               = "${module.main_sg.this_security_group_name}: ${module.main_sg.this_security_group_description}"
-        source_security_group_id  = module.main_sg.this_security_group_id
+        description               = "${module.alb_sg.this_security_group_name}: ${module.alb_sg.this_security_group_description}"
+        source_security_group_id  = module.alb_sg.this_security_group_id
       }
   ]
+  number_of_computed_ingress_with_source_security_group_id = length(var.alb_ingress)
 }
 
 module "ec2" {
@@ -134,56 +157,13 @@ module "ec2" {
   user_data_base64 = base64encode("${file("test.sh")}")
 }
 
-module "acm" {
-  source  = "terraform-aws-modules/acm/aws"
-  version = "~> 2.0"
-
-  domain_name = "${var.app_slug}.${var.tfenv}.${local.domain_name}" # trimsuffix(data.aws_route53_zone.this.name, ".") # Terraform >= 0.12.17
-  zone_id     = data.aws_route53_zone.this.id
-}
-
-# module "alb_sg" {
-#   source  = "terraform-aws-modules/security-group/aws"
-#   version = "~> 3.0"
-
-#   name                      = "${var.naming_format}-${var.tfenv}-${var.app_slug}-sg"
-#   description               = "ETS ${var.tfenv} security group for ${var.app_name}"
-#   vpc_id                    = var.pre_existing_vpc == false ? module.ec2_vpc.vpc_id : data.aws_vpc.env_vpc.id
-
-#   ingress_cidr_blocks = ["202.82.226.146/32"]
-#   ingress_rules       = ["ssh-tcp"]
-#   egress_rules        = ["all-all"]
-
-#   ingress_with_cidr_blocks = [
-#     for item in var.alb_ingress:
-#       {
-#         from_port     = item.internal_port
-#         to_port       = item.internal_port
-#         protocol      = "tcp"
-#         description   = "Office VPN Access, ${var.app_name}: ${item.internal_port}"
-#         cidr_blocks   = "202.82.226.146/32"
-#       }
-#   ]
-
-#   computed_ingress_with_source_security_group_id = [
-#     for item in var.alb_ingress:
-#       {
-#         from_port                 = item.internal_port
-#         to_port                   = item.internal_port
-#         protocol                  = "tcp"
-#         description               = "${module.main_sg.this_security_group_name}: ${module.main_sg.this_security_group_description}"
-#         source_security_group_id  = module.main_sg.this_security_group_id
-#       }
-#   ]
-# }
-
 module "alb" {
   source                        = "terraform-aws-modules/alb/aws"
   version                       = "5.6.0"
 
   name                          = "LIVE-${var.app_slug}-${var.tfenv}-alb"
   subnets                       = module.ec2_vpc.public_subnets
-  security_groups               = [module.main_sg.this_security_group_id]
+  security_groups               = [module.alb_sg.this_security_group_id]
   vpc_id                        = module.ec2_vpc.vpc_id
   http_tcp_listeners = [
     {
@@ -270,6 +250,18 @@ module "nlb" {
   ]
 }
 
+resource "aws_route53_record" "shell_dns_record" {
+  zone_id = data.aws_route53_zone.this.id
+  name    = "shell.${var.app_slug}.${var.tfenv}.${local.domain_name}"
+  type    = "A"
+
+  alias {
+    name                   = module.nlb.this_lb_dns_name
+    zone_id                = module.nlb.this_lb_zone_id
+    evaluate_target_health = true
+  }
+}
+
 resource "aws_lb_target_group_attachment" "nlb_target_group_attachment" {
   count                         = length(module.nlb.target_group_arns)
   target_group_arn              = module.nlb.target_group_arns[count.index]
@@ -281,3 +273,11 @@ resource "aws_lb_target_group_attachment" "alb_target_group_attachment" {
   target_group_arn              = module.alb.target_group_arns[count.index]
   target_id                     = module.ec2.id[0]
 } 
+
+module "acm" {
+  source  = "terraform-aws-modules/acm/aws"
+  version = "~> 2.0"
+
+  domain_name = "${var.app_slug}.${var.tfenv}.${local.domain_name}" # trimsuffix(data.aws_route53_zone.this.name, ".") # Terraform >= 0.12.17
+  zone_id     = data.aws_route53_zone.this.id
+}
