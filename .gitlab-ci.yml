@@ -38,7 +38,7 @@ validate:
   only:
     - web
     - merge_requests
-    - triggers
+    - pipelines
     
 
 ## PLAN 
@@ -61,7 +61,7 @@ tfsec:
     refs:
       - web
       - merge_requests
-      - triggers
+      - pipelines
     variables:
       - $TF_VAR_tfenv == "stag" || $TF_VAR_tfenv == "prod"
 
@@ -100,7 +100,7 @@ plan:
       - $PLAN
   only:
     - web
-    - triggers
+    - pipelines
 
 ## APPLY NON PROD ENVS
 apply_nonProd:
@@ -119,7 +119,7 @@ apply_nonProd:
   only:
     refs:
       - web
-      - triggers
+      - pipelines
   except:
     variables:
       - $TF_VAR_tfenv == "prod"
@@ -145,7 +145,7 @@ apply_prod:
   only:
     refs:
       - web
-      - triggers
+      - pipelines
     variables:
       - $TF_VAR_tfenv == "prod"
   when: manual
@@ -162,6 +162,7 @@ destroy:
   only:
     refs:
       - web
+      - pipelines
   except:
     variables:
       - $TF_VAR_tfenv == "prod"
