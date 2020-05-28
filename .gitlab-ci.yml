@@ -107,8 +107,6 @@ apply_nonProd:
   stage: apply
   script:
     - terraform apply -input=false $PLAN
-    - DYNAMIC_ENVIRONMENT_URL=$(terraform output -no-color env-dynamic-url)
-    - echo "DYNAMIC_ENVIRONMENT_URL=$DYNAMIC_ENVIRONMENT_URL" >> deploy.env
   dependencies:
     - plan
   artifacts:
