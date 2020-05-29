@@ -166,12 +166,12 @@ provision:
   stage: provision
   image: registry.git.hk.asiaticketing.com/technology/system/deploy/ansible:latest
   script:
+    - pwd
     - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-client -y )'
     - eval $(ssh-agent -s)
     - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
-    - echo "X-ets-$TF_VAR_app_slug-TF_VAR_tfenv ansible_host=shell.$TF_VAR_app_slug.$TF_VAR_tfenv.hk.asiaticketing.com live_hostname=X-ets-$TF_VAR_app_slug-$TF_VAR_tfenv ansible_python_interpreter=/usr/bin/python3 remote_ubuntu_home=/deploy" >> Docker.env
-    - ls -la
-    - cd ansible_repo && ansible-playbook -i ./Docker.env ./playbooks/tools/SetupInstances.yml --extra-vars "tfenv=$TF_VAR_tfenv instance_set=X region=$TF_VAR_aws_region ansible_ssh_private_key_file=~/.ssh/$TF_VAR_key_name.pem live_hostname=X-ets-$TF_VAR_app_slug-$TF_VAR_tfenv CODEchoice=X"
+    - echo "X-ets-$TF_VAR_app_slug-TF_VAR_tfenv ansible_host=shell.$TF_VAR_app_slug.$TF_VAR_tfenv.hk.asiaticketing.com live_hostname=X-ets-$TF_VAR_app_slug-$TF_VAR_tfenv ansible_python_interpreter=/usr/bin/python3 remote_ubuntu_home=/deploy" >> /deploy/ansible_repo/Docker.env
+    - cd /deploy/ansible_repo && ansible-playbook -i ./Docker.env ./playbooks/tools/SetupInstances.yml --extra-vars "tfenv=$TF_VAR_tfenv instance_set=X region=$TF_VAR_aws_region ansible_ssh_private_key_file=~/.ssh/$TF_VAR_key_name.pem live_hostname=X-ets-$TF_VAR_app_slug-$TF_VAR_tfenv CODEchoice=X"
   only:
     refs:
       - web
