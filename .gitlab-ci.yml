@@ -171,7 +171,7 @@ provision:
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
     - echo "$ANSIBLE_VAULT_PASS" >> /deploy/ansible_repo/environment/.vault_pass2
-    - echo "X-ets-$TF_VAR_app_slug-TF_VAR_tfenv ansible_host=shell.$TF_VAR_app_slug.$TF_VAR_tfenv.hk.asiaticketing.com live_hostname=X-ets-$TF_VAR_app_slug-$TF_VAR_tfenv ansible_python_interpreter=/usr/bin/python3 remote_ubuntu_home=/deploy" >> /deploy/ansible_repo/Docker.env
+    - echo "X-ets-$TF_VAR_app_slug-$TF_VAR_tfenv ansible_host=shell.$TF_VAR_app_slug.$TF_VAR_tfenv.hk.asiaticketing.com live_hostname=X-ets-$TF_VAR_app_slug-$TF_VAR_tfenv ansible_python_interpreter=/usr/bin/python3 remote_ubuntu_home=/deploy" >> /deploy/ansible_repo/Docker.env
     - echo "$HOME   " && echo "ls -la ~/.ssh/"
     - cd /deploy/ansible_repo && ansible-playbook -i ./Docker.env ./playbooks/tools/SetupInstances.yml --extra-vars "tfenv=$TF_VAR_tfenv instance_set=X region=$TF_VAR_aws_region live_hostname=X-ets-$TF_VAR_app_slug-$TF_VAR_tfenv CODEchoice=X"
   only:
