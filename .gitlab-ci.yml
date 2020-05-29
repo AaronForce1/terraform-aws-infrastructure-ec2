@@ -15,7 +15,7 @@ cache:
   paths:
     - .terraform
 
-before_script:
+.terraform_init: &terraform_init
   - apk add --update curl jq
   - alias convert_report="jq -r '([.resource_changes[].change.actions?]|flatten)|{\"create\":(map(select(.==\"create\"))|length),\"update\":(map(select(.==\"update\"))|length),\"delete\":(map(select(.==\"delete\"))|length)}'"
   - curl -o aws-iam-authenticator https://amazon-eks.s3-us-west-2.amazonaws.com/1.14.6/2019-08-22/bin/linux/amd64/aws-iam-authenticator
@@ -34,6 +34,8 @@ stages:
 ## VALIDATE
 validate:
   stage: validate
+  before_script:
+    - *terraform_init
   script:
     - terraform validate
   only:
@@ -51,6 +53,7 @@ tfsec:
       - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/go/bin'
   stage: plan
   before_script:
+    - *terraform_init
     - tfsec -v
   script: tfsec . -f json | tee gl-sast-report.json
   dependencies:
@@ -68,6 +71,8 @@ tfsec:
 
 merge review:
   stage: plan
+  before_script:
+    - *terraform_init
   script:
     - terraform plan -out=$PLAN
     - "terraform show --json $PLAN | convert_report > $JSON_PLAN_FILE"
@@ -106,6 +111,8 @@ plan:
 ## APPLY NON PROD ENVS
 apply_nonProd:
   stage: apply
+  before_script:
+    - *terraform_init
   script:
     - terraform apply -input=false $PLAN
   dependencies:
@@ -130,6 +137,8 @@ apply_nonProd:
 ## APPLY PRODUCTION
 apply_prod:
   stage: apply
+  before_script:
+    - *terraform_init
   script:
     - terraform apply -input=false $PLAN
     - DYNAMIC_ENVIRONMENT_URL=$(terraform output -no-color env-dynamic-url)
