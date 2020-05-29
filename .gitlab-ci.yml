@@ -28,6 +28,7 @@ stages:
   - validate
   - plan
   - apply
+  - provision
   - destroy
 
 ## VALIDATE
@@ -150,6 +151,24 @@ apply_prod:
   environment:
     name: ${TF_VAR_app_slug}-production
     url: $DYNAMIC_ENVIRONMENT_URL
+
+## PROVISION
+provision:
+  stage: provision
+  image: registry.git.hk.asiaticketing.com/technology/system/deploy/ansible:latest
+  dependencies:
+    - apply
+  script:
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - echo "X-ets-$TF_VAR_app_slug-TF_VAR_tfenv ansible_host=shell.$TF_VAR_app_slug.$TF_VAR_tfenv.hk.asiaticketing.com live_hostname=X-ets-$TF_VAR_app_slug-$TF_VAR_tfenv ansible_python_interpreter=/usr/bin/python3 remote_ubuntu_home=/deploy" >> Docker.env
+    - ansible-playbook -i ./local.env  ./playbooks/tools/SetupInstances.yml --extra-vars "tfenv=$TF_VAR_tfenv instance_set=X region=$TF_VAR_aws_region ansible_ssh_private_key_file=~/.ssh/$TF_VAR_key_name.pem live_hostname=X-ets-$TF_VAR_app_slug-$TF_VAR_tfenv CODEchoice=X"
+  only:
+    refs:
+      - web
+      - pipelines
+  except:
+    variables:
+      - $TF_VAR_tfenv == "prod"
 
 ## DESTROY TEST
 destroy:
