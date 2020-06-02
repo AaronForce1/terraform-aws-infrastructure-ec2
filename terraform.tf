@@ -78,7 +78,7 @@ module "main_sg" {
   description               = "ETS ${var.tfenv} security group for ${var.app_name}"
   vpc_id                    = var.pre_existing_vpc == false ? module.ec2_vpc.vpc_id : data.aws_vpc.env_vpc.id
 
-  ingress_cidr_blocks = ["202.82.226.146/32"]
+  ingress_cidr_blocks = ["202.82.226.146/32", "172.16.142.0/24", "172.16.143.0/24"]
   ingress_rules       = ["ssh-tcp"]
   egress_rules        = ["all-all"]
 
