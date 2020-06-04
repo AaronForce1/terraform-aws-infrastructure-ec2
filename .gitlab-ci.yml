@@ -10,6 +10,8 @@ variables:
   JSON_PLAN_FILE: tfplan.json
   TF_IN_AUTOMATION: "true"
   TERM: "xterm-256color"
+  CONTAINER_IMAGE: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME
+  RELEASE_IMAGE: $CI_REGISTRY_IMAGE:latest
   
 cache:
   key: "$CI_COMMIT_REF_SLUG"
@@ -26,11 +28,32 @@ cache:
   - terraform init -backend-config "region=ap-southeast-1" -backend-config "key=$TF_VAR_app_name/$TF_VAR_tfenv/terraform.tfstate" -backend-config "bucket=ets-terraform-remote-state-storage-s3" -backend-config "encrypt=true"
 
 stages:
+  - build
+  - release
   - validate
   - plan
   - apply
   - provision
   - destroy
+
+## BUILD LOCAL IMAGE
+build:
+  stage: build
+  script:
+    - docker build --pull -t $CONTAINER_IMAGE .
+    - docker push $CONTAINER_IMAGE
+
+## RELEASE LOCAL IMAGE AS PROD
+release:
+  stage: release
+  script:
+    - docker pull $CONTAINER_IMAGE 
+    - docker tag $CONTAINER_IMAGE $RELEASE_IMAGE
+    - docker push $RELEASE_IMAGE
+  dependencies:
+    - build
+  only:
+    - tags
 
 ## VALIDATE
 validate:
