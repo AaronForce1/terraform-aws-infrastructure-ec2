@@ -4,8 +4,14 @@ image:
     - '/usr/bin/env'
     - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
 
+services:
+  - docker:dind
+
 # Default output file for Terraform plan
 variables:
+  DOCKER_DRIVER: overlay2
+  GITLAB_USERNAME: gitlab-ci-token
+  GITLAB_PASSWORD: $CI_JOB_TOKEN
   PLAN: plan.tfplan
   JSON_PLAN_FILE: tfplan.json
   TF_IN_AUTOMATION: "true"
