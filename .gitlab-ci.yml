@@ -33,6 +33,10 @@ cache:
   - printenv | grep "TF_VAR"
   - terraform init -backend-config "region=ap-southeast-1" -backend-config "key=$TF_VAR_app_name/$TF_VAR_tfenv/terraform.tfstate" -backend-config "bucket=ets-terraform-remote-state-storage-s3" -backend-config "encrypt=true"
 
+.docker_login: &docker_login
+  - docker info 
+  - docker login $CI_REGISTRY -u $GITLAB_USERNAME -p $GITLAB_PASSWORD
+
 stages:
   - build
   - release
@@ -46,6 +50,8 @@ stages:
 build:
   stage: build
   image: docker:latest
+  before_script:
+    - *docker_login
   script:
     - docker build --pull -t $CONTAINER_IMAGE .
     - docker push $CONTAINER_IMAGE
@@ -54,6 +60,8 @@ build:
 release:
   stage: release
   image: docker:latest
+  before_script:
+    - *docker_login
   script:
     - docker pull $CONTAINER_IMAGE 
     - docker tag $CONTAINER_IMAGE $RELEASE_IMAGE
