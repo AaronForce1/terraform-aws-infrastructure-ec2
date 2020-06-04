@@ -39,6 +39,7 @@ stages:
 ## BUILD LOCAL IMAGE
 build:
   stage: build
+  image: docker:latest
   script:
     - docker build --pull -t $CONTAINER_IMAGE .
     - docker push $CONTAINER_IMAGE
@@ -46,6 +47,7 @@ build:
 ## RELEASE LOCAL IMAGE AS PROD
 release:
   stage: release
+  image: docker:latest
   script:
     - docker pull $CONTAINER_IMAGE 
     - docker tag $CONTAINER_IMAGE $RELEASE_IMAGE
