@@ -190,6 +190,7 @@ provision:
   stage: provision
   image: registry.git.hk.asiaticketing.com/technology/system/deploy/ansible:latest
   script:
+    - sleep 1m # DNS Propagation from Terraform Apply
     - eval $(ssh-agent -s)
     - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
     - mkdir -p ~/.ssh
