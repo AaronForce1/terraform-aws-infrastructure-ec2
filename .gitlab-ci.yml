@@ -55,6 +55,8 @@ build:
   script:
     - docker build --pull -t $CONTAINER_IMAGE .
     - docker push $CONTAINER_IMAGE
+    - docker build --pull -t $CI_REGISTRY_IMAGE:ubuntu -f Dockerfile.ubuntu .
+    - docker push $CI_REGISTRY_IMAGE:ubuntu
 
 ## RELEASE LOCAL IMAGE AS PROD
 release:

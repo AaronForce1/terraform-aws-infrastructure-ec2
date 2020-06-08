@@ -92,6 +92,11 @@ variable "pre_existing_vpc" {
   default = false
 }
 
+variable "app_name_for_vpc" {
+  description = "If you'd like to attach to pre-existing VPC, you need to specify the app name that created the original VPC in order for the system to find it correctly based on {naming_format + tfenv + app_slug}"
+  default = "internal"
+}
+
 ## ADMINISTRATION VARS
 variable "admin_ips" {
   type        = list(string)
