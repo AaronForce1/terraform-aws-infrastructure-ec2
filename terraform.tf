@@ -49,10 +49,11 @@ module "ec2_vpc" {
 module "alb_sg" {
   source  = "terraform-aws-modules/security-group/aws"
   version = "~> 3.0"
+  create = count(var.alb_ingress) > 0
 
   name                      = "${var.naming_format}-${var.tfenv}-${var.app_slug}-LB-sg"
   description               = "ETS ${var.tfenv} security group for Load Balancer Supporting: ${var.app_name}"
-  vpc_id                    = var.pre_existing_vpc == false ? module.ec2_vpc.vpc_id : data.aws_vpc.env_vpc.id
+  vpc_id                    = !var.pre_existing_vpc ? module.ec2_vpc.vpc_id : data.aws_vpc.env_vpc.id
 
   ingress_cidr_blocks = ["202.82.226.146/32"]
   ingress_rules       = ["ssh-tcp", "http-80-tcp"]
@@ -73,10 +74,11 @@ module "alb_sg" {
 module "main_sg" {
   source  = "terraform-aws-modules/security-group/aws"
   version = "~> 3.0"
+  create = !var.pre_existing_vpc
 
   name                      = "${var.naming_format}-${var.tfenv}-${var.app_slug}-sg"
   description               = "ETS ${var.tfenv} security group for ${var.app_name}"
-  vpc_id                    = var.pre_existing_vpc == false ? module.ec2_vpc.vpc_id : data.aws_vpc.env_vpc.id
+  vpc_id                    = !var.pre_existing_vpc ? module.ec2_vpc.vpc_id : data.aws_vpc.env_vpc.id
 
                         # TODO: Adjust hardcoded gitlab SSH server!
   ingress_cidr_blocks = ["202.82.226.146/32", "172.16.142.0/24", "172.16.143.0/24", "52.76.108.132/32", "52.74.231.214/32"]
@@ -118,8 +120,8 @@ module "ec2" {
   instance_type                 = local.environments[var.tfenv][2]
   key_name                      = var.key_name
   monitoring                    = true
-  vpc_security_group_ids        = [ "${module.main_sg.this_security_group_id}" ]
-  subnet_id                     = tolist(module.ec2_vpc.public_subnets)[0]
+  vpc_security_group_ids        = !var.pre_existing_vpc ? [ "${module.main_sg.this_security_group_id}" ] : "${data.aws_security_groups.env_sg.ids}"
+  subnet_id                     = !var.pre_existing_vpc ? tolist(module.ec2_vpc.public_subnets)[0] : tolist(data.aws_subnet_ids.env_vpc_subnets.ids)[0]
 
   associate_public_ip_address   = true
 
@@ -161,11 +163,12 @@ module "ec2" {
 module "alb" {
   source                        = "terraform-aws-modules/alb/aws"
   version                       = "5.6.0"
+  create                        = var.alb_ingress > 0
 
   name                          = "LIVE-${var.app_slug}-${var.tfenv}-alb"
   subnets                       = module.ec2_vpc.public_subnets
   security_groups               = [module.alb_sg.this_security_group_id]
-  vpc_id                        = module.ec2_vpc.vpc_id
+  vpc_id                        = !var.pre_existing_vpc ? module.ec2_vpc.vpc_id : data.aws_vpc.env_vpc.id
   http_tcp_listeners = [
     {
       port               = 80

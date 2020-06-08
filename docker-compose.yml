@@ -1,0 +1,24 @@
+version: '3'
+
+services:
+  ets-deploy:
+    image: registry.git.hk.asiaticketing.com/technology/system/deploy/ansible:latest
+    volumes:
+      - .:/build/
+    env_file:
+      - .env
+    environment:
+      CI_PROJECT_DIR: /build
+  ets-terraform:
+    build:
+      dockerfile: Dockerfile.ubuntu
+      context: .
+    volumes:
+      - .:/deploy/terraform_repo/
+    env_file:
+      - .env
+    environment:
+      CI_PROJECT_DIR: /build
+      BUCKET_REGION: ap-southeast-1
+      BUCKET_NAME: ets-terraform-remote-state-storage-s3-local-aaron
+    command: 'terraform init -backend-config "region=$BUCKET_REGION" -backend-config "key=$TF_VAR_app_name/$TF_VAR_tfenv/terraform.tfstate" -backend-config "$BUCKET_NAME" -backend-config "encrypt=true"'
