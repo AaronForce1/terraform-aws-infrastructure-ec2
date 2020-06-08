@@ -1,1 +1,30 @@
-.terraform
+#python compiled files
+*.pyc
+.idea
+
+#ticketflap repo
+ticketflap/Ticketing
+Ticketflap/Ticketing
+
+#others
+*.log
+*.vault*
+*.tfvars
+ansible.cfg
+
+#terraform
+.terraform*
+terraform.tfstate
+terraform.tfstate.backup
+*.pem
+.DS_Store
+
+# Misc
+*.retry
+*.pem
+roles/**/.travis.yml
+group_vars/aws_creds.yml
+roles/flapdeploy/files/.aws/credentials.gpg
+
+# Environment
+.env

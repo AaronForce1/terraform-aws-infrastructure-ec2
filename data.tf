@@ -10,7 +10,7 @@ data "aws_subnet_ids" "env_vpc_subnets" {
   
   filter {
     name = "tag:Name"
-    values = ["*-public-*"]
+    values = var.pre_existing_vpc ? ["*-public-*"] : ["*-internal-*"]
   }
 }
 

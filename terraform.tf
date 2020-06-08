@@ -49,9 +49,10 @@ module "ec2_vpc" {
 module "alb_sg" {
   source  = "terraform-aws-modules/security-group/aws"
   version = "~> 3.0"
-  create = count(var.alb_ingress) > 0
+  create = length(var.alb_ingress) > 0
 
   name                      = "${var.naming_format}-${var.tfenv}-${var.app_slug}-LB-sg"
+  use_name_prefix           = false
   description               = "ETS ${var.tfenv} security group for Load Balancer Supporting: ${var.app_name}"
   vpc_id                    = !var.pre_existing_vpc ? module.ec2_vpc.vpc_id : data.aws_vpc.env_vpc.id
 
@@ -77,6 +78,7 @@ module "main_sg" {
   create = !var.pre_existing_vpc
 
   name                      = "${var.naming_format}-${var.tfenv}-${var.app_slug}-sg"
+  use_name_prefix           = false
   description               = "ETS ${var.tfenv} security group for ${var.app_name}"
   vpc_id                    = !var.pre_existing_vpc ? module.ec2_vpc.vpc_id : data.aws_vpc.env_vpc.id
 
@@ -163,7 +165,7 @@ module "ec2" {
 module "alb" {
   source                        = "terraform-aws-modules/alb/aws"
   version                       = "5.6.0"
-  create                        = var.alb_ingress > 0
+  create_lb                     = length(var.alb_ingress) > 0
 
   name                          = "LIVE-${var.app_slug}-${var.tfenv}-alb"
   subnets                       = module.ec2_vpc.public_subnets
@@ -212,6 +214,7 @@ module "alb" {
 }
 
 resource "aws_route53_record" "dns_record" {
+  count   = length(var.alb_ingress) > 0 ? 1 : 0
   zone_id = data.aws_route53_zone.this.id
   name    = "${var.app_slug}.${var.tfenv}.${local.domain_name}"
   type    = "A"
@@ -230,8 +233,8 @@ module "nlb" {
   name                          = "LIVE-${var.app_slug}-${var.tfenv}-nlb"
   load_balancer_type            = "network"
 
-  vpc_id                        = module.ec2_vpc.vpc_id
-  subnets                       = module.ec2_vpc.public_subnets
+  vpc_id                        = !var.pre_existing_vpc ? module.ec2_vpc.vpc_id : data.aws_vpc.env_vpc.id
+  subnets                       = !var.pre_existing_vpc ? module.ec2_vpc.public_subnets : data.aws_subnet_ids.env_vpc_subnets.ids
 
   # access_logs = {
   #   bucket = module.log_bucket.this_s3_bucket_id
@@ -273,7 +276,7 @@ resource "aws_lb_target_group_attachment" "nlb_target_group_attachment" {
 }
 
 resource "aws_lb_target_group_attachment" "alb_target_group_attachment" {
-  count                         = length(module.alb.target_group_arns)
+  count                         = length(var.alb_ingress) > 0 ? length(module.alb.target_group_arns) : 0
   target_group_arn              = module.alb.target_group_arns[count.index]
   target_id                     = module.ec2.id[0]
 } 
@@ -282,6 +285,13 @@ module "acm" {
   source  = "terraform-aws-modules/acm/aws"
   version = "~> 2.0"
 
-  domain_name = "${var.app_slug}.${var.tfenv}.${local.domain_name}" # trimsuffix(data.aws_route53_zone.this.name, ".") # Terraform >= 0.12.17
-  zone_id     = data.aws_route53_zone.this.id
+  create_certificate       = length(var.alb_ingress) > 0
+  domain_name              = "${var.app_slug}.${var.tfenv}.${local.domain_name}"
+  zone_id                  = data.aws_route53_zone.this.id
+  subject_alternative_names = [
+    "*.${var.app_slug}.${var.tfenv}.${local.domain_name}"
+  ]
+  tags = {
+    Name = "${var.app_slug}.${var.tfenv}.${local.domain_name}"
+  }
 }
