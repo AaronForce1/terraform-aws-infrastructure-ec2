@@ -5,12 +5,21 @@ data "aws_vpc" "env_vpc" {
     }
 }
 
-data "aws_subnet_ids" "env_vpc_subnets" {
+data "aws_subnet_ids" "env_vpc_public_subnets" {
   vpc_id = data.aws_vpc.env_vpc.id
   
   filter {
     name = "tag:Name"
-    values = var.pre_existing_vpc ? ["*-public-*"] : ["*-internal-*"]
+    values = var.pre_existing_vpc ? ["*-public-*"] : ["*-external-*"]
+  }
+}
+
+data "aws_subnet_ids" "env_vpc_private_subnets" {
+  vpc_id = data.aws_vpc.env_vpc.id
+  
+  filter {
+    name = "tag:Name"
+    values = var.pre_existing_vpc ? ["*-private-*"] : ["*-internal-*"]
   }
 }
 

@@ -39,7 +39,6 @@ variable "alb_ingress" {
   default = []
 }
 
-## TO-DO: Needs to be mounted manually right now.
 variable "app_vol_size" {
   description = "Application Volume Size"
   default = "20"
@@ -64,6 +63,21 @@ variable "billingcustomer" {
 variable "key_name" {
   description = "TF Key"
   default = "ETS-ticketflap-seoul-key"
+}
+
+variable "s3_storage" {
+  description = "Confirm whether or not to create storage in S3 for application infra"
+  default = false
+}
+
+variable "s3_acl" {
+  description = "S3 Access Control List: private or public"
+  default = "private"
+}
+
+variable "rds_instance" {
+  description = "Confirm whether or not to create RDS DB storage for application infr"
+  default = false
 }
 
 ## AWS REGIONAL VARS

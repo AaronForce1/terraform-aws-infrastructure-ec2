@@ -5,3 +5,7 @@ output "ec2_instances" {
 output "output_sgs" {
   value = module.main_sg
 }
+
+output "rds_password" {
+  value = var.rds_instance ? random_password.rds_password.result : ""
+}

@@ -17,15 +17,22 @@ provider "aws" {
 
 ############################################
 
-# module "log_bucket" {
-#   source                         = "terraform-aws-modules/s3-bucket/aws"
-#   version                        = "~> 1.0"
+module "s3_bucket" {
+  source             = "terraform-aws-modules/s3-bucket/aws"
+  create_bucket      = var.s3_storage
 
-#   bucket                         = "logs-${var.naming_format}-${var.tfenv}-${var.app_slug}"
-#   acl                            = "log-delivery-write"
-#   force_destroy                  = true
-#   attach_elb_log_delivery_policy = true
-# }
+  bucket             = "${var.naming_format}-${var.tfenv}-${var.app_slug}"
+  acl                = var.s3_acl
+}
+
+module "s3_bucket_for_logs" {
+  source                         = "terraform-aws-modules/s3-bucket/aws"
+
+  bucket                         = "logs-${var.naming_format}-${var.tfenv}-${var.app_slug}"
+  acl                            = "log-delivery-write"
+  force_destroy                  = true
+  attach_elb_log_delivery_policy = true
+}
 
 module "ec2_vpc" {
   source              = "terraform-aws-modules/vpc/aws"
@@ -123,7 +130,7 @@ module "ec2" {
   key_name                      = var.key_name
   monitoring                    = true
   vpc_security_group_ids        = !var.pre_existing_vpc ? [ "${module.main_sg.this_security_group_id}" ] : "${data.aws_security_groups.env_sg.ids}"
-  subnet_id                     = !var.pre_existing_vpc ? tolist(module.ec2_vpc.public_subnets)[0] : tolist(data.aws_subnet_ids.env_vpc_subnets.ids)[0]
+  subnet_id                     = !var.pre_existing_vpc ? tolist(module.ec2_vpc.public_subnets)[0] : tolist(data.aws_subnet_ids.env_vpc_public_subnets.ids)[0]
 
   associate_public_ip_address   = true
 
@@ -234,7 +241,7 @@ module "nlb" {
   load_balancer_type            = "network"
 
   vpc_id                        = !var.pre_existing_vpc ? module.ec2_vpc.vpc_id : data.aws_vpc.env_vpc.id
-  subnets                       = !var.pre_existing_vpc ? module.ec2_vpc.public_subnets : data.aws_subnet_ids.env_vpc_subnets.ids
+  subnets                       = !var.pre_existing_vpc ? module.ec2_vpc.public_subnets : data.aws_subnet_ids.env_vpc_public_subnets.ids
 
   # access_logs = {
   #   bucket = module.log_bucket.this_s3_bucket_id
@@ -293,5 +300,135 @@ module "acm" {
   ]
   tags = {
     Name = "${var.app_slug}.${var.tfenv}.${local.domain_name}"
+  }
+}
+
+resource "random_password" "rds_password" {
+  length = 24
+  special = true
+  override_special = "_%@"
+}
+
+#TODO: Expand DB module to encompass more than just PostGRES
+module "rds" {
+  source  = "terraform-aws-modules/rds/aws"
+  version = "~> 2.0"
+
+  create_db_instance = var.rds_instance
+
+  identifier = "${var.naming_format}-${var.app_slug}.${var.tfenv}"
+
+  engine            = "postgres"
+  engine_version    = "9.6.9"
+  instance_class    = "db.t2.large"
+  allocated_storage = 5
+  storage_encrypted = true
+
+  name     = "${var.naming_format}-${var.app_slug}.${var.tfenv}"
+  username = "${var.app_slug}-${var.tfenv}-service"
+  password = random_password.rds_password.result
+  port     = "5432"
+
+  iam_database_authentication_enabled = true
+
+  vpc_security_group_ids = !var.pre_existing_vpc ? [ "${module.main_sg.this_security_group_id}" ] : "${data.aws_security_groups.env_sg.ids}"
+
+  maintenance_window = "Mon:00:00-Mon:03:00"
+  backup_window      = "03:00-06:00"
+
+  # Enhanced Monitoring - see example for details on how to create the role
+  # by yourself, in case you don't want to create it automatically
+  monitoring_interval = "30"
+  monitoring_role_name = "${var.naming_format}-${var.app_slug}.${var.tfenv}-monitoring-role"
+  create_monitoring_role = var.rds_instance
+
+  tags = {
+    Name            = "${var.app_slug}-${var.tfenv}-db"
+    DatabaseType    = "postgres"
+    DatabaseVersion = "9.6"
+    Owner           = "${var.app_slug}-${var.tfenv}-service"
+    Environment     = "${var.tfenv}"
+    Namespace       = "technology-system"
+    Product         = "${var.app_slug}"
+  }
+
+  # DB subnet group
+  subnet_ids = !var.pre_existing_vpc ? module.ec2_vpc.private_subnets : data.aws_subnet_ids.env_vpc_private_subnets.ids
+
+  # DB parameter group
+  family = "postgres9.6"
+
+  # DB option group
+  major_engine_version = "9.6"
+
+  # Snapshot name upon DB deletion
+  final_snapshot_identifier = "final-snapshot-${var.naming_format}-${var.app_slug}.${var.tfenv}"
+
+  # Database Deletion Protection
+  deletion_protection = true
+
+  # Backup Retention Period
+  backup_retention_period = 7
+
+  parameters = [
+    {
+      name = "character_set_client"
+      value = "utf8"
+    },
+    {
+      name = "character_set_server"
+      value = "utf8"
+    }
+  ]
+}
+
+module "rds_nlb" {
+  source                        = "terraform-aws-modules/alb/aws"
+  version                       = "5.6.0"
+  create_lb                     = var.rds_instance
+
+  name                          = "ETS-${var.app_slug}-${var.tfenv}-RDS-nlb"
+  load_balancer_type            = "network"
+
+  vpc_id                        = !var.pre_existing_vpc ? module.ec2_vpc.vpc_id : data.aws_vpc.env_vpc.id
+  subnets                       = !var.pre_existing_vpc ? module.ec2_vpc.private_subnets : data.aws_subnet_ids.env_vpc_private_subnets.ids
+
+  # access_logs = {
+  #   bucket = module.log_bucket.this_s3_bucket_id
+  # }
+
+  http_tcp_listeners = [
+    {
+      port                      = 5432
+      protocol                  = "TCP"
+    }
+  ]
+
+  target_groups = [
+    {
+      name                      = "${var.app_slug}-${var.tfenv}-5432-rds-tg"
+      backend_protocol          = "TCP"
+      backend_port              = 5432
+      target_type               = "instance"
+    }
+  ]
+}
+
+resource "aws_lb_target_group_attachment" "rds_nlb_target_group_attachment" {
+  count                         = var.rds_instance ? 1 : 0
+  target_group_arn              = module.rds_nlb.target_group_arns[count.index]
+  target_id                     = module.rds.this_db_instance_id
+} 
+
+resource "aws_route53_record" "rds_dns_record" {
+  count   = var.rds_instance ? 1 : 0
+  zone_id = data.aws_route53_zone.this.id
+  name    = "data.${var.app_slug}.${var.tfenv}.${local.domain_name}"
+  type    = "A"
+
+  alias {
+    name                   = module.nlb.this_lb_dns_name
+    zone_id                = module.nlb.this_lb_zone_id
+    evaluate_target_health = true
   }
 }
