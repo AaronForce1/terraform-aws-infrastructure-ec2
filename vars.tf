@@ -1,5 +1,14 @@
+## GLOBAL VALUES
 terraform {
   required_version = ">= 0.12.6"
+}
+
+variable "profile" {
+  description = "Profile of AWS Credential to fetch from ~/.aws/credentials file"
+}
+
+variable "serviceaccount_role" {
+  description = "Service Account Role expected to run the necessary infrastructure provisioning"
 }
 
 ## APPLICATION VALUES

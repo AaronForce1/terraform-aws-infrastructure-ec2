@@ -37,6 +37,10 @@ cache:
   - docker info 
   - docker login $CI_REGISTRY -u $GITLAB_USERNAME -p $GITLAB_PASSWORD
 
+# .docker_login_hub: &docker_login_hub
+#   - docker info
+#   - docker login hub.docker.com -u $DOCKERHUB_USERNAME -p $DOCKERHUB_PASSWORD
+
 stages:
   - build
   - release
@@ -72,6 +76,17 @@ release:
     - build
   only:
     - tags
+
+# release cloud:
+#   stage: release
+#   image: docker:latest
+#   before_script:
+#     - *docker_login_hub
+#   script:
+#     - docker build -t $CONTAINER_IMAGE .
+#     - docker push $CONTAINER_IMAGE
+#     - docker build --pull -t $CI_REGISTRY_IMAGE:ubuntu -f Dockerfile.ubuntu .
+#     - docker push $CI_REGISTRY_IMAGE:ubuntu
 
 ## VALIDATE
 validate:

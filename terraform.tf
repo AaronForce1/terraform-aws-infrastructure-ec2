@@ -12,7 +12,13 @@ terraform {
 }
 
 provider "aws" {
-  region = var.aws_region
+  region    =   var.aws_region
+  profile   =   var.profile
+
+  assume_role {
+    role_arn     = var.serviceaccount_role
+    external_id = "infrastructure-ec2-terraform"
+  }
 }
 
 ############################################
