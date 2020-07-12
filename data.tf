@@ -1,7 +1,7 @@
 data "aws_vpc" "env_vpc" {
     filter {
         name   = "tag:Name"
-        values = var.pre_existing_vpc ? ["${var.naming_format}-${var.tfenv}-${var.app_name_for_vpc}-vpc"] : ["flap-internal-vpc"]
+        values = var.pre_existing_vpc ? ["${var.naming_format}-${var.tfenv}-${var.app_name_for_vpc}-vpc"] : ["aws-default-vpc"]
     }
 }
 
@@ -50,14 +50,14 @@ data "aws_security_groups" "fd-admin-protocols" {
 data "aws_security_groups" "env_sg" {
   filter {
     name  = "tag:Name"
-    values = var.pre_existing_vpc ? ["${var.naming_format}-${var.tfenv}-${var.app_name_for_vpc}-sg"] : ["fd-admin-protocols-sg"]
+    values = var.pre_existing_vpc ? ["${var.naming_format}-${var.tfenv}-${var.app_name_for_vpc}-sg"] : ["infra-default-admin-sg"]
   }
 }
 
 data "aws_security_groups" "alb_sg" {
   filter {
     name = "tag:Name"
-    values = var.pre_existing_vpc ? ["${var.naming_format}-${var.tfenv}-${var.app_name_for_vpc}-LB-sg"] : ["fd-admin-protocols-sg"]
+    values = var.pre_existing_vpc ? ["${var.naming_format}-${var.tfenv}-${var.app_name_for_vpc}-LB-sg"] : ["infra-default-admin-sg"]
   }
 }
 
