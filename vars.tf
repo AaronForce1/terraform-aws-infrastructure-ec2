@@ -20,6 +20,11 @@ variable "app_slug" {
   description = "Application Slug"
 }
 
+variable "domain_name" {
+  description = "Root domain name for application/EC2 Deployment. By default: hk.asiaticketing.com"
+  default = "hk.asiaticketing.com"
+}
+
 variable "instance_type" {
   # Standard Types (M | L | XL | XXL): m5.large | c5.xlarge | t3a.2xlarge | m5a.2xlarge
   description = "AWS Instance Type for provisioning"

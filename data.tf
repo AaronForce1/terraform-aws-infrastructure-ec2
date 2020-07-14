@@ -40,10 +40,10 @@ data "aws_ami" "ubuntu" {
 }
 
 # These datasource lookups pull back a LIST of results, even if there is only one result. This has to be taken care of in your module - e.g. ids[0]
-data "aws_security_groups" "fd-admin-protocols" {
+data "aws_security_groups" "infra-default-admin-sg" {
   filter {
     name   = "group-name"
-    values = ["fd-admin-protocols-sg"]
+    values = ["infra-default-admin-sg"]
   }
 }
 
@@ -65,5 +65,5 @@ data "aws_availability_zones" "azs" {
 }
 
 data "aws_route53_zone" "this" {
-  name = local.domain_name
+  name = var.domain_name
 }

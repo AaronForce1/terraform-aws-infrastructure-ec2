@@ -5,6 +5,7 @@ locals {
     stag  = [ "1", var.app_name, var.instance_type, var.app_slug, join("", [var.app_slug, "-", "sg"])]
     prod  = [ "1", var.app_name, var.instance_type, var.app_slug, join("", [var.app_slug, "-", "sg"])]
   }
+  hostname = var.tfenv == "prod" ? "${var.app_slug}.${var.domain_name}" : "${var.app_slug}.${var.tfenv}.${var.domain_name}"
 }
 
 terraform {
@@ -52,10 +53,11 @@ module "ec2_vpc" {
   public_subnets      = ["172.16.142.0/24", "172.16.143.0/24"]
 
   enable_nat_gateway  = true
-  enable_vpn_gateway  = true
+  enable_vpn_gateway  = false
 
   tags = {
     Environment       = var.tfenv
+    billingcustomer   = var.billingcustomer
   }
 }
 
@@ -154,6 +156,7 @@ module "ec2" {
     tfgroup                     = local.environments[var.tfenv][1]
     tfenv                       = var.tfenv
     tfname                      = "${local.environments[var.tfenv][1]}-${lower(var.instance_set)}"
+    billingcustomer             = var.billingcustomer
   }
 
   root_block_device = [
@@ -180,7 +183,7 @@ module "alb" {
   version                       = "5.6.0"
   create_lb                     = length(var.alb_ingress) > 0
 
-  name                          = "LIVE-${var.app_slug}-${var.tfenv}-alb"
+  name                          = "LIVE-${var.naming_format}-${var.app_slug}-${var.tfenv}-alb"
   subnets                       = module.ec2_vpc.public_subnets
   security_groups               = [module.alb_sg.this_security_group_id]
   vpc_id                        = !var.pre_existing_vpc ? module.ec2_vpc.vpc_id : data.aws_vpc.env_vpc.id
@@ -229,7 +232,7 @@ module "alb" {
 resource "aws_route53_record" "dns_record" {
   count   = length(var.alb_ingress) > 0 ? 1 : 0
   zone_id = data.aws_route53_zone.this.id
-  name    = "${var.app_slug}.${var.tfenv}.${local.domain_name}"
+  name    = "${local.hostname}"
   type    = "A"
 
   alias {
@@ -243,7 +246,7 @@ module "nlb" {
   source                        = "terraform-aws-modules/alb/aws"
   version                       = "5.6.0"
 
-  name                          = "LIVE-${var.app_slug}-${var.tfenv}-nlb"
+  name                          = "LIVE-${var.naming_format}-${var.app_slug}-${var.tfenv}-nlb"
   load_balancer_type            = "network"
 
   vpc_id                        = !var.pre_existing_vpc ? module.ec2_vpc.vpc_id : data.aws_vpc.env_vpc.id
@@ -272,7 +275,7 @@ module "nlb" {
 
 resource "aws_route53_record" "shell_dns_record" {
   zone_id = data.aws_route53_zone.this.id
-  name    = "shell.${var.app_slug}.${var.tfenv}.${local.domain_name}"
+  name    = "shell.${local.hostname}"
   type    = "A"
 
   alias {
@@ -299,13 +302,14 @@ module "acm" {
   version = "~> 2.0"
 
   create_certificate       = length(var.alb_ingress) > 0
-  domain_name              = "${var.app_slug}.${var.tfenv}.${local.domain_name}"
+  domain_name              = "${local.hostname}"
   zone_id                  = data.aws_route53_zone.this.id
   subject_alternative_names = [
-    "*.${var.app_slug}.${var.tfenv}.${local.domain_name}"
+    "*.${local.hostname}"
   ]
   tags = {
-    Name = "${var.app_slug}.${var.tfenv}.${local.domain_name}"
+    Name = "${local.hostname}"
+    billingcustomer = var.billingcustomer
   }
 }
 
@@ -322,16 +326,17 @@ module "rds" {
 
   create_db_instance = var.rds_instance
 
-  identifier = "${var.naming_format}-${var.app_slug}.${var.tfenv}"
+  identifier = "${var.naming_format}-${var.app_slug}-${var.tfenv}"
 
   engine            = "postgres"
-  engine_version    = "9.6.9"
-  instance_class    = "db.t2.large"
-  allocated_storage = 5
+  engine_version    = "12.2"
+  instance_class    = "db.t3.medium"
+  storage_type      = "gp2"
+  allocated_storage = 100
   storage_encrypted = true
 
-  name     = "${var.naming_format}-${var.app_slug}.${var.tfenv}"
-  username = "${var.app_slug}-${var.tfenv}-service"
+  name     = "${var.app_slug}"
+  username = "${var.app_slug}service"
   password = random_password.rds_password.result
   port     = "5432"
 
@@ -345,7 +350,7 @@ module "rds" {
   # Enhanced Monitoring - see example for details on how to create the role
   # by yourself, in case you don't want to create it automatically
   monitoring_interval = "30"
-  monitoring_role_name = "${var.naming_format}-${var.app_slug}.${var.tfenv}-monitoring-role"
+  monitoring_role_name = "${var.naming_format}-${var.app_slug}-${var.tfenv}-monitoring-role"
   create_monitoring_role = var.rds_instance
 
   tags = {
@@ -356,85 +361,83 @@ module "rds" {
     Environment     = "${var.tfenv}"
     Namespace       = "technology-system"
     Product         = "${var.app_slug}"
+    billingcustomer = "${var.billingcustomer}"
+    Prefix          = "${var.naming_format}"
   }
 
   # DB subnet group
   subnet_ids = !var.pre_existing_vpc ? module.ec2_vpc.private_subnets : data.aws_subnet_ids.env_vpc_private_subnets.ids
 
   # DB parameter group
-  family = "postgres9.6"
+  family = "postgres12"
 
   # DB option group
-  major_engine_version = "9.6"
+  major_engine_version = "12"
 
   # Snapshot name upon DB deletion
-  final_snapshot_identifier = "final-snapshot-${var.naming_format}-${var.app_slug}.${var.tfenv}"
+  final_snapshot_identifier = "final-snapshot-${var.naming_format}-${var.app_slug}-${var.tfenv}"
 
   # Database Deletion Protection
-  deletion_protection = true
+  deletion_protection = var.tfenv == "prod" ? true : false
 
   # Backup Retention Period
   backup_retention_period = 7
 
-  parameters = [
-    {
-      name = "character_set_client"
-      value = "utf8"
-    },
-    {
-      name = "character_set_server"
-      value = "utf8"
-    }
-  ]
+  # parameters = [
+  #   {
+  #     name = "character_set_client"
+  #     value = "utf8"
+  #   },
+  #   {
+  #     name = "character_set_server"
+  #     value = "utf8"
+  #   }
+  # ]
 }
 
-module "rds_nlb" {
-  source                        = "terraform-aws-modules/alb/aws"
-  version                       = "5.6.0"
-  create_lb                     = var.rds_instance
+# module "rds_nlb" {
+#   source                        = "terraform-aws-modules/alb/aws"
+#   version                       = "5.6.0"
+#   create_lb                     = var.rds_instance
 
-  name                          = "ETS-${var.app_slug}-${var.tfenv}-RDS-nlb"
-  load_balancer_type            = "network"
+#   name                          = "${var.naming_format}-${var.app_slug}-${var.tfenv}-rds-nlb"
+#   load_balancer_type            = "network"
 
-  vpc_id                        = !var.pre_existing_vpc ? module.ec2_vpc.vpc_id : data.aws_vpc.env_vpc.id
-  subnets                       = !var.pre_existing_vpc ? module.ec2_vpc.private_subnets : data.aws_subnet_ids.env_vpc_private_subnets.ids
+#   vpc_id                        = !var.pre_existing_vpc ? module.ec2_vpc.vpc_id : data.aws_vpc.env_vpc.id
+#   subnets                       = !var.pre_existing_vpc ? module.ec2_vpc.private_subnets : data.aws_subnet_ids.env_vpc_private_subnets.ids
 
-  # access_logs = {
-  #   bucket = module.log_bucket.this_s3_bucket_id
-  # }
+#   # access_logs = {
+#   #   bucket = module.log_bucket.this_s3_bucket_id
+#   # }
 
-  http_tcp_listeners = [
-    {
-      port                      = 5432
-      protocol                  = "TCP"
-    }
-  ]
+#   http_tcp_listeners = [
+#     {
+#       port                      = 5432
+#       protocol                  = "TCP"
+#     }
+#   ]
 
-  target_groups = [
-    {
-      name                      = "${var.app_slug}-${var.tfenv}-5432-rds-tg"
-      backend_protocol          = "TCP"
-      backend_port              = 5432
-      target_type               = "instance"
-    }
-  ]
-}
+#   target_groups = [
+#     {
+#       name                      = "${var.app_slug}-${var.tfenv}-5432-rds-tg"
+#       backend_protocol          = "TCP"
+#       backend_port              = 5432
+#       target_type               = "instance"
+#     }
+#   ]
+# }
 
-resource "aws_lb_target_group_attachment" "rds_nlb_target_group_attachment" {
-  count                         = var.rds_instance ? 1 : 0
-  target_group_arn              = module.rds_nlb.target_group_arns[count.index]
-  target_id                     = module.rds.this_db_instance_id
-} 
+# resource "aws_lb_target_group_attachment" "rds_nlb_target_group_attachment" {
+#   count                         = var.rds_instance ? 1 : 0
+#   target_group_arn              = module.rds_nlb.target_group_arns[count.index]
+#   target_id                     = module.rds.this_db_instance_id
+# } 
 
 resource "aws_route53_record" "rds_dns_record" {
   count   = var.rds_instance ? 1 : 0
   zone_id = data.aws_route53_zone.this.id
-  name    = "data.${var.app_slug}.${var.tfenv}.${local.domain_name}"
-  type    = "A"
-
-  alias {
-    name                   = module.nlb.this_lb_dns_name
-    zone_id                = module.nlb.this_lb_zone_id
-    evaluate_target_health = true
-  }
+  name    = "data.${local.hostname}"
+  type    = "CNAME"
+  ttl     = "60"
+  records = ["${module.rds.this_db_instance_endpoint}"]
 }
