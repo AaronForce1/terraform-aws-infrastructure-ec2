@@ -16,7 +16,7 @@ variables:
   JSON_PLAN_FILE: tfplan.json
   TF_IN_AUTOMATION: "true"
   TERM: "xterm-256color"
-  CONTAINER_IMAGE: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME
+  CONTAINER_IMAGE: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
   RELEASE_IMAGE: $CI_REGISTRY_IMAGE:latest
   
 cache:
@@ -59,8 +59,8 @@ build:
   script:
     - docker build --pull -t $CONTAINER_IMAGE .
     - docker push $CONTAINER_IMAGE
-    - docker build --pull -t $CI_REGISTRY_IMAGE:ubuntu -f Dockerfile.ubuntu .
-    - docker push $CI_REGISTRY_IMAGE:ubuntu
+    - docker build --pull -t $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG -f Dockerfile .
+    - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
 
 ## RELEASE LOCAL IMAGE AS PROD
 release:
@@ -221,7 +221,7 @@ apply_prod:
 ## PROVISION
 provision:
   stage: provision
-  image: registry.git.hk.asiaticketing.com/technology/system/deploy/ansible:latest
+  image: registry.git.hk.asiaticketing.com/ansible/deployments:1.0.0
   script:
     - sleep 1m # DNS Propagation from Terraform Apply
     - eval $(ssh-agent -s)

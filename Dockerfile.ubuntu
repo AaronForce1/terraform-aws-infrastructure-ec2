@@ -1,8 +1,0 @@
-FROM registry.git.hk.asiaticketing.com/technology/system/deploy/ansible:latest
-
-USER root
-RUN wget -O /tmp/terraform.zip https://releases.hashicorp.com/terraform/0.12.24/terraform_0.12.24_linux_amd64.zip && unzip /tmp/terraform.zip -d /usr/local/bin/
-
-WORKDIR /deploy
-RUN chown -R root:root ./
-COPY . ./terraform_repo
