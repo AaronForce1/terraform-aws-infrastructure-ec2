@@ -5,6 +5,7 @@ terraform {
 
 variable "profile" {
   description = "Profile of AWS Credential to fetch from ~/.aws/credentials file"
+  default = ""
 }
 
 variable "serviceaccount_role" {
@@ -55,7 +56,16 @@ variable "alb_ingress" {
 
 variable "app_vol_size" {
   description = "Application Volume Size"
-  default = "20"
+    type = list(object({
+    vol_size = number
+    name = string
+  }))
+  default = []
+}
+
+variable "root_vol_size" {
+  description = "Root Volume Size"
+  default = "50"
 }
 
 ## GLOBAL VAR CONFIGURATION
@@ -81,7 +91,8 @@ variable "key_name" {
 
 variable "s3_storage" {
   description = "Confirm whether or not to create storage in S3 for application infra"
-  default = false
+  type = "list"
+  default = []
 }
 
 variable "s3_acl" {
@@ -122,7 +133,7 @@ variable "pre_existing_vpc" {
 
 variable "app_name_for_vpc" {
   description = "If you'd like to attach to pre-existing VPC, you need to specify the app name that created the original VPC in order for the system to find it correctly based on {naming_format + tfenv + app_slug}"
-  default = "internal"
+  default = "aws-default-vpc"
 }
 
 ## ADMINISTRATION VARS

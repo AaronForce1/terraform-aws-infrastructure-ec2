@@ -1,5 +1,5 @@
 output "ec2_instances" {
-  value = module.ec2
+  value = module.ec2.arn
 }
 
 output "output_sgs" {

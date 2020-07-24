@@ -24,12 +24,12 @@ provider "aws" {
 
 ############################################
 
-module "s3_bucket" {
-  source             = "terraform-aws-modules/s3-bucket/aws"
-  create_bucket      = var.s3_storage
+resource "aws_s3_bucket" "app_buckets" {
+  count         = "${length(var.s3_storage)}"
+  bucket        = "${var.naming_format}-${var.app_slug}-${var.tfenv}-${var.s3_storage[count.index]}"
 
-  bucket             = "${var.naming_format}-${var.tfenv}-${var.app_slug}"
-  acl                = var.s3_acl
+  acl           = var.s3_acl
+  force_destroy =  var.tfenv == "prod" ? true : false
 }
 
 module "s3_bucket_for_logs" {
@@ -99,7 +99,7 @@ module "main_sg" {
 
                         # TODO: Adjust hardcoded gitlab SSH server!
   ingress_cidr_blocks = ["202.82.226.146/32", "172.16.142.0/24", "172.16.143.0/24", "52.76.108.132/32", "52.74.231.214/32"]
-  ingress_rules       = ["ssh-tcp"]
+  ingress_rules       = ["ssh-tcp", "postgresql-tcp"]
   egress_rules        = ["all-all"]
 
   ingress_with_cidr_blocks = [
@@ -126,6 +126,59 @@ module "main_sg" {
   number_of_computed_ingress_with_source_security_group_id = length(var.alb_ingress)
 }
 
+resource "aws_iam_role" "ec2_instance_role" {
+  name = "${var.naming_format}-${var.app_slug}-${var.tfenv}-ec2_instance_role"
+
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": "sts:AssumeRole",
+      "Principal": {
+        "Service": "ec2.amazonaws.com"
+      },
+      "Effect": "Allow",
+      "Sid": ""
+    }
+  ]
+}
+EOF
+
+  tags = {
+    billingcustomer             = var.billingcustomer
+    tfbasegroup                 = "tfservers"
+    tfgroup                     = local.environments[var.tfenv][1]
+    tfenv                       = var.tfenv
+    tfname                      = "${local.environments[var.tfenv][1]}-${lower(var.instance_set)}"
+  }
+}
+
+resource "aws_iam_instance_profile" "ec2_instance_profile" {
+  name = "${var.naming_format}-${var.app_slug}-${var.tfenv}-ec2_instance_profile"
+  role = "${aws_iam_role.ec2_instance_role.name}"
+}
+
+resource "aws_iam_role_policy" "ec2_instance_policy" {
+  name = "${var.naming_format}-${var.app_slug}-${var.tfenv}-ec2_s3_policy"
+  role = "${aws_iam_role.ec2_instance_role.id}"
+
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": [
+        "s3:*"
+      ],
+      "Effect": "Allow",
+      "Resource": "arn:aws:s3:::${var.naming_format}-${var.app_slug}-${var.tfenv}-*"
+    }
+  ]
+}
+EOF
+}
+
 module "ec2" {
   source                        = "terraform-aws-modules/ec2-instance/aws"
   version                       = "2.13.0"
@@ -142,6 +195,8 @@ module "ec2" {
 
   associate_public_ip_address   = true
 
+  iam_instance_profile          = "${var.naming_format}-${var.app_slug}-${var.tfenv}-ec2_instance_profile"
+
   tags = {
     ami_used                    = data.aws_ami.ubuntu.id
     autoscale                   = "running"
@@ -156,21 +211,21 @@ module "ec2" {
     tfgroup                     = local.environments[var.tfenv][1]
     tfenv                       = var.tfenv
     tfname                      = "${local.environments[var.tfenv][1]}-${lower(var.instance_set)}"
-    billingcustomer             = var.billingcustomer
   }
 
   root_block_device = [
     {
       volume_type               = "gp2"
-      volume_size               = 10
+      volume_size               = var.root_vol_size
     },
   ]
 
   ebs_block_device = [
+    for vol in var.app_vol_size:
     {
-      device_name               = "/dev/xvdb"
+      device_name               = vol.name
       volume_type               = "gp2"
-      volume_size               = var.app_vol_size
+      volume_size               = vol.vol_size
       encrypted                 = true
     }
   ]
@@ -246,7 +301,7 @@ module "nlb" {
   source                        = "terraform-aws-modules/alb/aws"
   version                       = "5.6.0"
 
-  name                          = "LIVE-${var.naming_format}-${var.app_slug}-${var.tfenv}-nlb"
+  name                          = "LIVE-${var.naming_format}-${substr(var.app_slug, 0, 12)}-${var.tfenv}-nlb"
   load_balancer_type            = "network"
 
   vpc_id                        = !var.pre_existing_vpc ? module.ec2_vpc.vpc_id : data.aws_vpc.env_vpc.id
@@ -353,6 +408,10 @@ module "rds" {
   monitoring_role_name = "${var.naming_format}-${var.app_slug}-${var.tfenv}-monitoring-role"
   create_monitoring_role = var.rds_instance
 
+  create_db_option_group = var.rds_instance
+  create_db_parameter_group = var.rds_instance
+  create_db_subnet_group = var.rds_instance
+
   tags = {
     Name            = "${var.app_slug}-${var.tfenv}-db"
     DatabaseType    = "postgres"
@@ -439,5 +498,5 @@ resource "aws_route53_record" "rds_dns_record" {
   name    = "data.${local.hostname}"
   type    = "CNAME"
   ttl     = "60"
-  records = ["${module.rds.this_db_instance_endpoint}"]
+  records = ["${element(split(":", module.rds.this_db_instance_endpoint), 0)}"]
 }
