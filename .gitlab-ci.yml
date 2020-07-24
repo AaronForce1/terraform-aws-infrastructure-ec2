@@ -61,15 +61,20 @@ build:
     - docker push $CONTAINER_IMAGE
     - docker build --pull -t $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG -f Dockerfile .
     - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
+  except:
+    - tags
 
 ## RELEASE LOCAL IMAGE AS PROD
 release:
   stage: release
   image: docker:latest
+  variables:
+    CONTAINER_IMAGE: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME
   before_script:
     - *docker_login
   script:
-    - docker pull $CONTAINER_IMAGE 
+    - docker build --pull -t $CONTAINER_IMAGE .
+    - docker push $CONTAINER_IMAGE
     - docker tag $CONTAINER_IMAGE $RELEASE_IMAGE
     - docker push $RELEASE_IMAGE
   dependencies:
