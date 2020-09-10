@@ -181,11 +181,13 @@ EOF
 
 module "ec2" {
   source                        = "terraform-aws-modules/ec2-instance/aws"
-  version                       = "2.13.0"
+  version                       = "2.15.0"
 
-  instance_count                = 1
-  name                          = "${var.instance_set}-${var.naming_format}-${var.tfenv}-${var.app_slug}-1-${substr(data.aws_availability_zones.azs.names[0], -1, -1)}"
-  
+  instance_count                = "${var.instance_count}"
+  name                          = "${var.instance_set}-${var.naming_format}-${var.tfenv}-${var.app_slug}"
+  use_num_suffix                = true
+  num_suffix_format             = "-%d-${substr(data.aws_availability_zones.azs.names[0], -1, -1)}"
+
   ami                           = data.aws_ami.ubuntu.id
   instance_type                 = local.environments[var.tfenv][2]
   key_name                      = var.key_name
@@ -300,6 +302,7 @@ resource "aws_route53_record" "dns_record" {
 module "nlb" {
   source                        = "terraform-aws-modules/alb/aws"
   version                       = "5.6.0"
+  create_lb                     = var.instance_count == 1 ? true : false
 
   name                          = "LIVE-${var.naming_format}-${substr(var.app_slug, 0, 12)}-${var.tfenv}-nlb"
   load_balancer_type            = "network"
@@ -332,6 +335,7 @@ resource "aws_route53_record" "shell_dns_record" {
   zone_id = data.aws_route53_zone.this.id
   name    = "shell.${local.hostname}"
   type    = "A"
+  count   = var.instance_count == 1 ? 1 : 0
 
   alias {
     name                   = module.nlb.this_lb_dns_name
@@ -341,7 +345,7 @@ resource "aws_route53_record" "shell_dns_record" {
 }
 
 resource "aws_lb_target_group_attachment" "nlb_target_group_attachment" {
-  count                         = length(module.nlb.target_group_arns)
+  count                         = var.instance_count == 1 ? length(module.nlb.target_group_arns) : 0
   target_group_arn              = module.nlb.target_group_arns[count.index]
   target_id                     = module.ec2.id[0]
 }
@@ -454,44 +458,6 @@ module "rds" {
   # ]
 }
 
-# module "rds_nlb" {
-#   source                        = "terraform-aws-modules/alb/aws"
-#   version                       = "5.6.0"
-#   create_lb                     = var.rds_instance
-
-#   name                          = "${var.naming_format}-${var.app_slug}-${var.tfenv}-rds-nlb"
-#   load_balancer_type            = "network"
-
-#   vpc_id                        = !var.pre_existing_vpc ? module.ec2_vpc.vpc_id : data.aws_vpc.env_vpc.id
-#   subnets                       = !var.pre_existing_vpc ? module.ec2_vpc.private_subnets : data.aws_subnet_ids.env_vpc_private_subnets.ids
-
-#   # access_logs = {
-#   #   bucket = module.log_bucket.this_s3_bucket_id
-#   # }
-
-#   http_tcp_listeners = [
-#     {
-#       port                      = 5432
-#       protocol                  = "TCP"
-#     }
-#   ]
-
-#   target_groups = [
-#     {
-#       name                      = "${var.app_slug}-${var.tfenv}-5432-rds-tg"
-#       backend_protocol          = "TCP"
-#       backend_port              = 5432
-#       target_type               = "instance"
-#     }
-#   ]
-# }
-
-# resource "aws_lb_target_group_attachment" "rds_nlb_target_group_attachment" {
-#   count                         = var.rds_instance ? 1 : 0
-#   target_group_arn              = module.rds_nlb.target_group_arns[count.index]
-#   target_id                     = module.rds.this_db_instance_id
-# } 
-
 resource "aws_route53_record" "rds_dns_record" {
   count   = var.rds_instance ? 1 : 0
   zone_id = data.aws_route53_zone.this.id
@@ -499,4 +465,14 @@ resource "aws_route53_record" "rds_dns_record" {
   type    = "CNAME"
   ttl     = "60"
   records = ["${element(split(":", module.rds.this_db_instance_endpoint), 0)}"]
+}
+
+resource "aws_eip" "elastic_ip" {
+  instance   = "${element(module.ec2.id.*,count.index)}"
+  count = "${var.instance_count}"
+  vpc = true
+  
+  tags = {
+    Name = "${var.naming_format}-${var.app_slug}-${var.tfenv}-${count.index + 1}"
+  }
 }

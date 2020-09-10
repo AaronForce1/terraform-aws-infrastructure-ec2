@@ -32,6 +32,11 @@ variable "instance_type" {
   default = "m5.large"
 }
 
+variable "instance_count" {
+  description = "Number of Instances to provision"
+  default = "1"
+}
+
 variable "internal_ingress_ports" {
   description = "Ports to be opened to allow ingress from Office VPN"
   type = list(string)

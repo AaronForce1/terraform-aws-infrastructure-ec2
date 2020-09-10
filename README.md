@@ -30,7 +30,7 @@ You can specify these manually, or pass them directly to terraform init.
 1. `terraform init`
 ```
 terraform init -backend-config "region=ap-southeast-1" \
-          -backend-config "key=$TF_VAR_app_name/$TF_VAR_tfenv/terraform.tfstate" \ 
+          -backend-config "key=$TF_VAR_domain_name/$TF_VAR_app_name/$TF_VAR_tfenv/terraform.tfstate" \ 
           -backend-config "bucket=ets-terraform-remote-state-storage-s3" \
           -backend-config "encrypt=true"
 ```

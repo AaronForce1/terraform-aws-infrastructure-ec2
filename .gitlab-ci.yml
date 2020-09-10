@@ -5,7 +5,7 @@ image:
     - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
 
 services:
-  - docker:dind
+  - docker:19.03.12-dind
 
 # Default output file for Terraform plan
 variables:
@@ -31,7 +31,7 @@ cache:
   - install aws-iam-authenticator /usr/local/bin/ && rm aws-iam-authenticator
   - terraform --version
   - printenv | grep "TF_VAR"
-  - terraform init -backend-config "region=ap-southeast-1" -backend-config "key=$TF_VAR_app_name/$TF_VAR_tfenv/terraform.tfstate" -backend-config "bucket=ets-terraform-remote-state-storage-s3" -backend-config "encrypt=true"
+  - terraform init -backend-config "region=ap-southeast-1" -backend-config "key=$TF_VAR_domain_name/$TF_VAR_app_name/$TF_VAR_tfenv/terraform.tfstate" -backend-config "bucket=ets-terraform-remote-state-storage-s3" -backend-config "encrypt=true"
 
 .docker_login: &docker_login
   - docker info 
