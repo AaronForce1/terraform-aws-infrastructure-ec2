@@ -8,10 +8,6 @@ locals {
   hostname = var.tfenv == "prod" ? "${var.app_slug}.${var.domain_name}" : "${var.app_slug}.${var.tfenv}.${var.domain_name}"
 }
 
-terraform {
- backend "local" {}
-}
-
 provider "aws" {
   region    =   var.aws_region
   profile   =   var.profile
