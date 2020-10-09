@@ -29,3 +29,6 @@ roles/flapdeploy/files/.aws/credentials.gpg
 
 # Environment
 .env
+
+# Terraform Immutables
+backend.tf
