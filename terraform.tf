@@ -9,7 +9,7 @@ locals {
 }
 
 terraform {
- backend "s3" {}
+ backend "local" {}
 }
 
 provider "aws" {
@@ -25,7 +25,7 @@ provider "aws" {
 ############################################
 
 resource "aws_s3_bucket" "app_buckets" {
-  count         = "${length(var.s3_storage)}"
+  count         = length(var.s3_storage)
   bucket        = "${var.naming_format}-${var.app_slug}-${var.tfenv}-${var.s3_storage[count.index]}"
 
   acl           = var.s3_acl
@@ -156,12 +156,12 @@ EOF
 
 resource "aws_iam_instance_profile" "ec2_instance_profile" {
   name = "${var.naming_format}-${var.app_slug}-${var.tfenv}-ec2_instance_profile"
-  role = "${aws_iam_role.ec2_instance_role.name}"
+  role = aws_iam_role.ec2_instance_role.name
 }
 
 resource "aws_iam_role_policy" "ec2_instance_policy" {
   name = "${var.naming_format}-${var.app_slug}-${var.tfenv}-ec2_s3_policy"
-  role = "${aws_iam_role.ec2_instance_role.id}"
+  role = aws_iam_role.ec2_instance_role.id
 
   policy = <<EOF
 {
@@ -237,7 +237,7 @@ module "ec2" {
 
 module "alb" {
   source                        = "terraform-aws-modules/alb/aws"
-  version                       = "5.6.0"
+  version                       = "5.9.0"
   create_lb                     = length(var.alb_ingress) > 0
 
   name                          = "LIVE-${var.naming_format}-${var.app_slug}-${var.tfenv}-alb"
@@ -289,7 +289,7 @@ module "alb" {
 resource "aws_route53_record" "dns_record" {
   count   = length(var.alb_ingress) > 0 ? 1 : 0
   zone_id = data.aws_route53_zone.this.id
-  name    = "${local.hostname}"
+  name    = local.hostname
   type    = "A"
 
   alias {
@@ -301,7 +301,7 @@ resource "aws_route53_record" "dns_record" {
 
 module "nlb" {
   source                        = "terraform-aws-modules/alb/aws"
-  version                       = "5.6.0"
+  version                       = "5.9.0"
   create_lb                     = var.instance_count == 1 ? true : false
 
   name                          = "LIVE-${var.naming_format}-${substr(var.app_slug, 0, 12)}-${var.tfenv}-nlb"
@@ -468,8 +468,8 @@ resource "aws_route53_record" "rds_dns_record" {
 }
 
 resource "aws_eip" "elastic_ip" {
-  instance   = "${element(module.ec2.id.*,count.index)}"
-  count = "${var.instance_count}"
+  instance   = element(module.ec2.id.*,count.index)
+  count = var.instance_count
   vpc = true
   
   tags = {

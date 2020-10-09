@@ -96,7 +96,7 @@ variable "key_name" {
 
 variable "s3_storage" {
   description = "Confirm whether or not to create storage in S3 for application infra"
-  type = "list"
+  type = list
   default = []
 }
 
