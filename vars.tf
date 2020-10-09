@@ -59,6 +59,11 @@ variable "alb_ingress" {
   default = []
 }
 
+variable "elastic_ip_allocation" {
+  description = "Do the EC2 instance need an Elastic IP for Security Group and other ingress capabilities?"
+  default = false
+}
+
 variable "app_vol_size" {
   description = "Application Volume Size"
     type = list(object({
@@ -71,6 +76,11 @@ variable "app_vol_size" {
 variable "root_vol_size" {
   description = "Root Volume Size"
   default = "50"
+}
+
+variable "ebs_optimized" {
+  description = "Does this instance need to have EBS Optimization?"
+  default = false
 }
 
 ## GLOBAL VAR CONFIGURATION
@@ -124,6 +134,11 @@ variable "tfenv" {
 variable "ubuntu_version" {
   description = "Ubuntu Version for pulling from AMI and creating EC2"
   default = "20.04"
+}
+
+variable "ami_override" {
+  description = "Add a specific AMI ID here in order to override the potential need for resetting an instance because a more advanced AMI became available for a specific version of linux, etc"
+  default = ""
 }
 
 variable "cidr_block" {

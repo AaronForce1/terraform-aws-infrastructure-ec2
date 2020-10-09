@@ -184,7 +184,8 @@ module "ec2" {
   use_num_suffix                = true
   num_suffix_format             = "-%d-${substr(data.aws_availability_zones.azs.names[0], -1, -1)}"
 
-  ami                           = data.aws_ami.ubuntu.id
+  ami                           = var.ami_override != "" ? var.ami_override : data.aws_ami.ubuntu.id
+  ebs_optimized                 = var.ebs_optimized
   instance_type                 = local.environments[var.tfenv][2]
   key_name                      = var.key_name
   monitoring                    = true
@@ -196,7 +197,7 @@ module "ec2" {
   iam_instance_profile          = "${var.naming_format}-${var.app_slug}-${var.tfenv}-ec2_instance_profile"
 
   tags = {
-    ami_used                    = data.aws_ami.ubuntu.id
+    ami_used                    = var.ami_override != "" ? var.ami_override : data.aws_ami.ubuntu.id
     autoscale                   = "running"
     billingcustomer             = var.billingcustomer
     build_state                 = "DEPLOYED"
@@ -276,7 +277,7 @@ module "alb" {
           unhealthy_threshold = 2
           timeout             = 5
           protocol            = ingress.internal_protocol
-          matcher             = "200"
+          matcher             = ingress.internal_port == ingress.external_port ? "200" : "302"
         }
       }
   ]
@@ -465,7 +466,7 @@ resource "aws_route53_record" "rds_dns_record" {
 
 resource "aws_eip" "elastic_ip" {
   instance   = element(module.ec2.id.*,count.index)
-  count = var.instance_count
+  count = var.elastic_ip_allocation ? var.instance_count : 0
   vpc = true
   
   tags = {
