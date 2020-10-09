@@ -18,6 +18,8 @@ variables:
   TERM: "xterm-256color"
   CONTAINER_IMAGE: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
   RELEASE_IMAGE: $CI_REGISTRY_IMAGE:latest
+  DOCKER_HOST: "tcp://localhost:2375"
+  DOCKER_TLS_CERTDIR: ""
   
 cache:
   key: "$CI_COMMIT_REF_SLUG"
