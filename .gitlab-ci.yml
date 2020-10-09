@@ -53,7 +53,7 @@ stages:
 ## BUILD LOCAL IMAGE
 build:
   stage: build
-  image: docker:latest
+  image: docker:19.03.12-dind
   before_script:
     - *docker_login
   script:
@@ -67,7 +67,7 @@ build:
 ## RELEASE LOCAL IMAGE AS PROD
 release:
   stage: release
-  image: docker:latest
+  image: docker:19.03.12-dind
   variables:
     CONTAINER_IMAGE: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME
   before_script:
@@ -84,7 +84,7 @@ release:
 
 # release cloud:
 #   stage: release
-#   image: docker:latest
+#   image: docker:19.03.12-dind
 #   before_script:
 #     - *docker_login_hub
 #   script:
