@@ -2,6 +2,7 @@ locals {
   #array  = [ QTY, NAME, INSTANCE_TYPE, ROLE, SGNAME, VPC_NAME ]
   environments = {
     test  = [ "1", var.app_name, var.instance_type, var.app_slug, join("", [var.app_slug, "-", "sg"])]
+    unittest  = [ "1", var.app_name, var.instance_type, var.app_slug, join("", [var.app_slug, "-", "sg"])]
     stag  = [ "1", var.app_name, var.instance_type, var.app_slug, join("", [var.app_slug, "-", "sg"])]
     prod  = [ "1", var.app_name, var.instance_type, var.app_slug, join("", [var.app_slug, "-", "sg"])]
   }
@@ -177,7 +178,6 @@ EOF
 
 module "ec2" {
   source                        = "terraform-aws-modules/ec2-instance/aws"
-  version                       = "2.15.0"
 
   instance_count                = "${var.instance_count}"
   name                          = "${var.instance_set}-${var.naming_format}-${var.tfenv}-${var.app_slug}"
@@ -237,7 +237,7 @@ module "alb" {
   version                       = "5.9.0"
   create_lb                     = length(var.alb_ingress) > 0
 
-  name                          = "LIVE-${var.naming_format}-${var.app_slug}-${var.tfenv}-alb"
+  name                          = "LIVE-${var.naming_format}-${substr(var.app_slug, 0, 8)}-${var.tfenv}-alb"
   subnets                       = module.ec2_vpc.public_subnets
   security_groups               = [module.alb_sg.this_security_group_id]
   vpc_id                        = !var.pre_existing_vpc ? module.ec2_vpc.vpc_id : data.aws_vpc.env_vpc.id

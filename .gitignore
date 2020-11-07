@@ -9,7 +9,6 @@ Ticketflap/Ticketing
 #others
 *.log
 *.vault*
-*.tfvars
 ansible.cfg
 
 #terraform
@@ -29,6 +28,7 @@ roles/flapdeploy/files/.aws/credentials.gpg
 
 # Environment
 .env
+.env.tfvars
 
 # Terraform Immutables
 backend.tf
