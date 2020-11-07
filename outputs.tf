@@ -9,3 +9,7 @@ output "output_sgs" {
 output "rds_password" {
   value = var.rds_instance ? random_password.rds_password.result : ""
 }
+
+output "ec2_vpc" {
+  value = module.ec2_vpc
+}
